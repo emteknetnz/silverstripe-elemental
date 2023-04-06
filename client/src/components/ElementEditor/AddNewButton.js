@@ -5,6 +5,8 @@ import i18n from 'i18n';
 import { elementTypeType } from 'types/elementTypeType';
 import { inject } from 'lib/Injector';
 
+import AddElementPopover from 'components/ElementEditor/AddElementPopover';
+
 class AddNewButton extends Component {
   constructor(props) {
     super(props);
@@ -27,7 +29,7 @@ class AddNewButton extends Component {
    * @returns {DOMElement}
    */
   render() {
-    const { AddElementPopoverComponent, elementTypes, areaId } = this.props;
+    const { elementTypes, areaId } = this.props;
     const buttonAttributes = {
       id: `ElementalArea${areaId}_AddButton`,
       color: 'primary',
@@ -40,7 +42,7 @@ class AddNewButton extends Component {
         <Button {...buttonAttributes}>
           {i18n._t('ElementAddNewButton.ADD_BLOCK', 'Add block')}
         </Button>
-        <AddElementPopoverComponent
+        <AddElementPopover
           placement="bottom-start"
           target={buttonAttributes.id}
           isOpen={this.state.popoverOpen}
@@ -62,10 +64,12 @@ AddNewButton.propTypes = {
 
 export { AddNewButton as Component };
 
-export default inject(
-  ['AddElementPopover'],
-  (AddElementPopoverComponent) => ({
-    AddElementPopoverComponent,
-  }),
-  () => 'ElementEditor.ElementList.AddNewButton'
-)(AddNewButton);
+// export default inject(
+//   ['AddElementPopover'],
+//   (AddElementPopoverComponent) => ({
+//     AddElementPopoverComponent,
+//   }),
+//   () => 'ElementEditor.ElementList.AddNewButton'
+// )(AddNewButton);
+
+export default AddNewButton;

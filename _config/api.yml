@@ -1,0 +1,6 @@
+---
+Name: elemental-api
+---
+SilverStripe\Control\Director:
+  rules:
+    'admin/elemental-api': DNADesign\Elemental\Controllers\ApiController

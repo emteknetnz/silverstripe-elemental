@@ -86,10 +86,12 @@ HoverBar.propTypes = {
 };
 export { HoverBar as Component };
 
-export default inject(
-  ['AddElementPopover'],
-  (AddElementPopoverComponent) => ({
-    AddElementPopoverComponent,
-  }),
-  () => 'ElementEditor.ElementList.HoverBar'
-)(HoverBar);
+// export default inject(
+//   ['AddElementPopover'],
+//   (AddElementPopoverComponent) => ({
+//     AddElementPopoverComponent,
+//   }),
+//   () => 'ElementEditor.ElementList.HoverBar'
+// )(HoverBar);
+
+export default HoverBar;

@@ -47,11 +47,11 @@ const SaveAction = (MenuComponent) => (props) => {
     endpoint(formData)
       .then(() => {
         // Update the Apollo query cache with the new form data
-        const { apolloClient } = window.ss;
+        // const { apolloClient } = window.ss;
 
-        // @todo optimistically update the data for the current element instead of
-        // rerunning the whole query
-        apolloClient.queryManager.reFetchObservableQueries();
+        // // @todo optimistically update the data for the current element instead of
+        // // rerunning the whole query
+        // apolloClient.queryManager.reFetchObservableQueries();
         reinitialiseForm(formData);
 
         const preview = $('.cms-preview');
@@ -127,4 +127,7 @@ function mapDispatchToProps(dispatch, ownProps) {
 
 export { SaveAction as Component };
 
-export default compose(connect(mapStateToProps, mapDispatchToProps), SaveAction);
+// export default compose(connect(mapStateToProps, mapDispatchToProps), SaveAction);
+
+export default SaveAction;
+

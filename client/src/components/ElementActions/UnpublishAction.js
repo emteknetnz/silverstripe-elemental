@@ -87,4 +87,7 @@ const UnpublishAction = (MenuComponent) => (props) => {
 
 export { UnpublishAction as Component };
 
-export default compose(unpublishBlockMutation, UnpublishAction);
+// export default compose(unpublishBlockMutation, UnpublishAction);
+
+export default UnpublishAction;
+

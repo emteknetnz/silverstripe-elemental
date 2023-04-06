@@ -61,4 +61,7 @@ const ArchiveAction = (MenuComponent) => (props) => {
 
 export { ArchiveAction as Component };
 
-export default compose(archiveBlockMutation, ArchiveAction);
+// export default compose(archiveBlockMutation, ArchiveAction);
+export default ArchiveAction;
+
+

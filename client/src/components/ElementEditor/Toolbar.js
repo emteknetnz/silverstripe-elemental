@@ -4,13 +4,17 @@ import { inject } from 'lib/Injector';
 import { elementTypeType } from 'types/elementTypeType';
 import { DropTarget } from 'react-dnd';
 
+import AddNewButton from 'components/ElementEditor/AddNewButton';
+
 // eslint-disable-next-line react/prefer-stateless-function
 class Toolbar extends PureComponent {
   render() {
-    const { AddNewButtonComponent, elementTypes, areaId, connectDropTarget } = this.props;
-    return connectDropTarget(
+    const { elementTypes, areaId, connectDropTarget } = this.props;
+    // todo reconnect dnd
+    //return connectDropTarget(
+    return (
       <div className="element-editor__toolbar">
-        <AddNewButtonComponent
+        <AddNewButton
           elementTypes={elementTypes}
           areaId={areaId}
         />
@@ -23,8 +27,9 @@ Toolbar.defaultProps = {};
 Toolbar.propTypes = {
   elementTypes: PropTypes.arrayOf(elementTypeType).isRequired,
   areaId: PropTypes.number.isRequired,
-  AddNewButtonComponent: PropTypes.elementType.isRequired,
-  connectDropTarget: PropTypes.func.isRequired,
+  // AddNewButtonComponent: PropTypes.elementType.isRequired,
+  // todo reconnect dnd
+  // connectDropTarget: PropTypes.func.isRequired,
   onDragOver: PropTypes.func, // eslint-disable-line react/no-unused-prop-types
   onDragDrop: PropTypes.func, // eslint-disable-line react/no-unused-prop-types
 };
@@ -38,12 +43,14 @@ const toolbarTarget = {
   }
 };
 
-export default DropTarget('element', toolbarTarget, connect => ({
-  connectDropTarget: connect.dropTarget(),
-}))(inject(
-  ['ElementAddNewButton'],
-  (AddNewButtonComponent) => ({
-    AddNewButtonComponent,
-  }),
-  () => 'ElementEditor.ElementToolbar'
-)(Toolbar));
+// export default DropTarget('element', toolbarTarget, connect => ({
+//   connectDropTarget: connect.dropTarget(),
+// }))(inject(
+//   ['ElementAddNewButton'],
+//   (AddNewButtonComponent) => ({
+//     AddNewButtonComponent,
+//   }),
+//   () => 'ElementEditor.ElementToolbar'
+// )(Toolbar));
+
+export default Toolbar;

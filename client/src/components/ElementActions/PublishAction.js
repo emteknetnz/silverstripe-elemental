@@ -1,5 +1,5 @@
 /* global window */
-import React from 'react';
+import React, { useContext } from 'react';
 import { compose } from 'redux';
 import AbstractAction from 'components/ElementActions/AbstractAction';
 import publishBlockMutation from 'state/editor/publishBlockMutation';
@@ -9,6 +9,13 @@ import { connect } from 'react-redux';
 import { loadElementSchemaValue } from 'state/editor/loadElementSchemaValue';
 import { loadElementFormStateName } from 'state/editor/loadElementFormStateName';
 import { initialize } from 'redux-form';
+// import { ElementEditorContext } from 'contexts/ElementEditorContext.js';
+import {
+  ElementEditorContext,
+  apiPut,
+  ACTION_TYPE_INCREMENT_AGE,
+  ACTION_TYPE_CHANGED_NAME,
+} from 'components/ElementEditor/ElementEditor';
 
 /**
  * Show a toast message reporting whether publication of Element was successful
@@ -56,7 +63,7 @@ const performSaveForElementWithFormData = (id, formData, securityId) => {
 
   // Perform save & get new version number to publish
   return saveEndpoint(formData)
-    .then(() => window.ss.apolloClient.queryManager.reFetchObservableQueries())
+    // .then(() => window.ss.apolloClient.queryManager.reFetchObservableQueries())
     .then((input) => {
       const preview = window.jQuery('.cms-preview');
       preview.entwine('ss.preview')._loadUrl(preview.find('iframe').attr('src'));
@@ -76,6 +83,16 @@ const performSaveForElementWithFormData = (id, formData, securityId) => {
  * Adds the elemental menu action to publish a draft/modified block
  */
 const PublishAction = (MenuComponent) => (props) => {
+
+  const {
+    contextState: elementEditorContextState,
+    setContextState: setElementEditorContextState,
+    reloadDataFromServer: elementEditorReloadDataFromServer,
+    dispatch: elementEditorDispatch
+  } = useContext(ElementEditorContext);
+
+  // console.log(['PublishAction team elementEditorContextState is', elementEditorContextState]);
+
   if (props.type.broken) {
     // Don't allow this action for a broken element.
     return (
@@ -111,11 +128,20 @@ const PublishAction = (MenuComponent) => (props) => {
         });
     }
 
-    // Perform publish. Data is assumed to be up to date
-    actionFlow
-      .then(() => handlePublishBlock(id))
-      .then(() => reportPublicationStatus(type.title, title, true))
-      .catch(() => reportPublicationStatus(type.title, title, false));
+    // Perform publish
+    const url = loadElementSchemaValue('publishUrl', id);
+    apiPut(url, { SecurityID: securityId })
+      .then((response) => {
+        reportPublicationStatus(type.title, title, response.ok);
+        // update context
+        console.log('Setting keyB from PublishAction')
+        setElementEditorContextState({ ...elementEditorContextState, keyB: 789 });
+        elementEditorDispatch({ type: ACTION_TYPE_INCREMENT_AGE });
+        elementEditorDispatch({ type: ACTION_TYPE_CHANGED_NAME, nextName: 'bob' });
+      });
+
+    // TODO: need to update published status icon on element - need to update redux store
+    // maybe just best to switch to context right now
   };
 
   const disabled = props.element.canPublish !== undefined && !props.element.canPublish;
@@ -168,8 +194,10 @@ function mapDispatchToProps(dispatch, ownProps) {
 
 export { PublishAction as Component };
 
-export default compose(
-  publishBlockMutation,
-  connect(mapStateToProps, mapDispatchToProps),
-  PublishAction
-);
+// export default compose(
+//   publishBlockMutation,
+//   connect(mapStateToProps, mapDispatchToProps),
+//   PublishAction
+// );
+
+export default PublishAction;

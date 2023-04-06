@@ -53,4 +53,5 @@ const DuplicateAction = (MenuComponent) => (props) => {
 
 export { DuplicateAction as Component };
 
-export default compose(duplicateBlockMutation, DuplicateAction);
+// export default compose(duplicateBlockMutation, DuplicateAction);
+export default DuplicateAction;

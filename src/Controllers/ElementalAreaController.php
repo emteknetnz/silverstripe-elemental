@@ -8,6 +8,7 @@ use DNADesign\Elemental\Services\ElementTypeRegistry;
 use Exception;
 use Psr\Log\LoggerInterface;
 use SilverStripe\CMS\Controllers\CMSMain;
+use SilverStripe\Control\Director;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Control\HTTPResponse_Exception;
@@ -42,10 +43,13 @@ class ElementalAreaController extends CMSMain
 
     public function getClientConfig()
     {
+        $apiUrl = Director::absoluteBaseURL() . '/admin/elemental-api';
         $clientConfig = parent::getClientConfig();
         $clientConfig['form']['elementForm'] = [
             'schemaUrl' => $this->Link('schema/elementForm'),
             'saveUrl' => $this->Link('api/saveForm'),
+            'publishUrl' => "$apiUrl/publishBlock",
+            'areasUrl' => "$apiUrl/areas",
             'saveMethod' => 'post',
             'payloadFormat' => 'json',
             'formNameTemplate' => sprintf(static::FORM_NAME_TEMPLATE ?? '', '{id}'),

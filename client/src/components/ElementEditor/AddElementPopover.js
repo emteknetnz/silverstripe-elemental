@@ -7,6 +7,8 @@ import { inject } from 'lib/Injector';
 import { elementTypeType } from 'types/elementTypeType';
 import i18n from 'i18n';
 
+
+
 /**
  * The AddElementPopover component used in the context of an ElementEditor shows the
  * available elements that can be added to an ElementalArea.
@@ -101,6 +103,7 @@ AddElementPopover.propTypes = {
   insertAfterElement: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
 };
 
+// todo We need PopoverOptionSet from admin
 export default inject(
   ['PopoverOptionSet'],
   (PopoverOptionSetComponent) => ({
@@ -108,3 +111,5 @@ export default inject(
   }),
   () => 'ElementEditor'
 )(AddElementPopover);
+
+// export default AddElementPopover;

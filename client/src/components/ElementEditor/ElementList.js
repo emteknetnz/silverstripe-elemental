@@ -10,6 +10,10 @@ import { DropTarget } from 'react-dnd';
 import { getDragIndicatorIndex } from 'lib/dragHelpers';
 import { getElementTypeConfig } from 'state/editor/elementConfig';
 
+import Element from 'components/ElementEditor/Element';
+import HoverBar from 'components/ElementEditor/HoverBar';
+import DragPositionIndicator  from 'components/ElementEditor/DragPositionIndicator';
+
 class ElementList extends Component {
   getDragIndicatorIndex() {
     const { dragTargetElementId, draggedItem, blocks, dragSpot } = this.props;
@@ -28,9 +32,6 @@ class ElementList extends Component {
    */
   renderBlocks() {
     const {
-      ElementComponent,
-      HoverBarComponent,
-      DragIndicatorComponent,
       blocks,
       allowedElementTypes,
       elementTypes,
@@ -52,7 +53,7 @@ class ElementList extends Component {
 
     let output = blocks.map((element) => (
       <div key={element.id}>
-        <ElementComponent
+        <Element
           element={element}
           areaId={areaId}
           type={getElementTypeConfig(element, elementTypes)}
@@ -61,7 +62,7 @@ class ElementList extends Component {
           onDragEnd={onDragEnd}
           onDragStart={onDragStart}
         />
-        {isDraggingOver || <HoverBarComponent
+        {isDraggingOver || <HoverBar
           key={`create-after-${element.id}`}
           areaId={areaId}
           elementId={element.id}
@@ -73,7 +74,7 @@ class ElementList extends Component {
     // Add a insert point above the first block for consistency
     if (!isDraggingOver) {
       output = [
-        <HoverBarComponent
+        <HoverBar
           key={0}
           areaId={areaId}
           elementId={0}
@@ -84,7 +85,7 @@ class ElementList extends Component {
 
     const dragIndicatorIndex = this.getDragIndicatorIndex();
     if (isDraggingOver && dragIndicatorIndex !== null) {
-      output.splice(dragIndicatorIndex, 0, <DragIndicatorComponent key="DropIndicator" />);
+      output.splice(dragIndicatorIndex, 0, <DragPositionIndicator key="DropIndicator" />);
     }
 
     return output;
@@ -99,7 +100,7 @@ class ElementList extends Component {
     const { loading, LoadingComponent } = this.props;
 
     if (loading) {
-      return <LoadingComponent />;
+      return <Loading />;
     }
     return null;
   }
@@ -111,12 +112,20 @@ class ElementList extends Component {
       { 'elemental-editor-list--empty': !blocks || !blocks.length }
     );
 
-    return this.props.connectDropTarget(
+    return (
       <div className={listClassNames}>
         {this.renderLoading()}
         {this.renderBlocks()}
       </div>
     );
+
+    // todo
+    // return this.props.connectDropTarget(
+    //   <div className={listClassNames}>
+    //     {this.renderLoading()}
+    //     {this.renderBlocks()}
+    //   </div>
+    // );
   }
 }
 
@@ -164,19 +173,32 @@ const elementListTarget = {
   },
 };
 
+// export default compose(
+//   DropTarget('element', elementListTarget, (connector, monitor) => ({
+//     connectDropTarget: connector.dropTarget(),
+//     draggedItem: monitor.getItem(),
+//   })),
+//   inject(
+//     ['Element', 'Loading', 'HoverBar', 'DragPositionIndicator'],
+//     (ElementComponent, LoadingComponent, HoverBarComponent, DragIndicatorComponent) => ({
+//       ElementComponent,
+//       LoadingComponent,
+//       HoverBarComponent,
+//       DragIndicatorComponent,
+//     }),
+//     () => 'ElementEditor.ElementList'
+//   )
+// )(ElementList);
+
+// need Loading component from admin
 export default compose(
-  DropTarget('element', elementListTarget, (connector, monitor) => ({
-    connectDropTarget: connector.dropTarget(),
-    draggedItem: monitor.getItem(),
-  })),
   inject(
-    ['Element', 'Loading', 'HoverBar', 'DragPositionIndicator'],
-    (ElementComponent, LoadingComponent, HoverBarComponent, DragIndicatorComponent) => ({
-      ElementComponent,
+    ['Loading'],
+    (LoadingComponent) => ({
       LoadingComponent,
-      HoverBarComponent,
-      DragIndicatorComponent,
     }),
     () => 'ElementEditor.ElementList'
   )
 )(ElementList);
+
+// export default ElementList;

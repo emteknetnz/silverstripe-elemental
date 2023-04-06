@@ -240,17 +240,19 @@ function mapStateToProps(state, ownProps) {
 
 export { Header as Component };
 
-export default compose(
-  DragSource('element', elementDragSource, connector => ({
-    connectDragSource: connector.dragSource(),
-    connectDragPreview: connector.dragPreview(),
-  })),
-  connect(mapStateToProps),
-  inject(
-    ['ElementActions'],
-    (ElementActionsComponent) => ({
-      ElementActionsComponent,
-    }),
-    () => 'ElementEditor.ElementList.Element'
-  )
-)(Header);
+// export default compose(
+//   DragSource('element', elementDragSource, connector => ({
+//     connectDragSource: connector.dragSource(),
+//     connectDragPreview: connector.dragPreview(),
+//   })),
+//   connect(mapStateToProps),
+//   inject(
+//     ['ElementActions'],
+//     (ElementActionsComponent) => ({
+//       ElementActionsComponent,
+//     }),
+//     () => 'ElementEditor.ElementList.Element'
+//   )
+// )(Header);
+
+export default Header;

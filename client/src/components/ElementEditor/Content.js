@@ -7,6 +7,9 @@ import { loadElementFormStateName } from 'state/editor/loadElementFormStateName'
 import { isDirty } from 'redux-form';
 import getFormState from 'lib/getFormState';
 
+import Summary from 'components/ElementEditor/Summary';
+import InlineEditForm from 'components/ElementEditor/InlineEditForm';
+
 class Content extends PureComponent {
   render() {
     const {
@@ -28,7 +31,7 @@ class Content extends PureComponent {
       <div className="element-editor-content">
         {!previewExpanded &&
           // Show summary
-          <SummaryComponent
+          <Summary
             content={content}
             fileUrl={fileUrl}
             fileTitle={fileTitle}
@@ -37,7 +40,7 @@ class Content extends PureComponent {
         }
         {previewExpanded &&
           // Show inline editable fields
-          <InlineEditFormComponent
+          <InlineEditForm
             extraClass={{ 'element-editor-editform--collapsed': !previewExpanded }}
             onClick={(event) => event.stopPropagation()}
             elementId={id}
@@ -83,13 +86,15 @@ function mapStateToProps(state, ownProps) {
 
 export { Content as Component };
 
-export default compose(
-  inject(
-    ['ElementSummary', 'ElementInlineEditForm'],
-    (SummaryComponent, InlineEditFormComponent) => ({
-      SummaryComponent, InlineEditFormComponent,
-    }),
-    () => 'ElementEditor.ElementList.Element'
-  ),
-  connect(mapStateToProps)
-)(Content);
+// export default compose(
+//   inject(
+//     ['ElementSummary', 'ElementInlineEditForm'],
+//     (SummaryComponent, InlineEditFormComponent) => ({
+//       SummaryComponent, InlineEditFormComponent,
+//     }),
+//     () => 'ElementEditor.ElementList.Element'
+//   ),
+//   connect(mapStateToProps)
+// )(Content);
+
+export default Content;

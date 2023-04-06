@@ -1,5 +1,5 @@
 /* global window */
-import React, { PureComponent } from 'react';
+import React, { useState, createContext, useReducer, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { inject } from 'lib/Injector';
 import { compose } from 'redux';
@@ -11,22 +11,75 @@ import sortBlockMutation from 'state/editor/sortBlockMutation';
 import ElementDragPreview from 'components/ElementEditor/ElementDragPreview';
 import withDragDropContext from 'lib/withDragDropContext';
 import { createSelector } from 'reselect';
+import { loadElementSchemaValue } from 'state/editor/loadElementSchemaValue';
+
+import Toolbar from 'components/ElementEditor/Toolbar';
+import ElementList from 'components/ElementEditor/ElementList';
+
+
+// these should live in some lib
+function apiFetch(url, options) {
+  console.log(['API fetching', url, options]);
+  return (async () => await fetch(url, options))();
+}
+
+export function apiGet(url) {
+  return apiFetch(url, { method: 'GET' });
+}
+
+export function apiPut(url, data) {
+  return apiFetch(url, { method: 'PUT', body: JSON.stringify(data) });
+}
+
+export const ElementEditorContext = createContext(null);
+
+export const ACTION_TYPE_INCREMENT_AGE = 'INCREMENT_AGE';
+export const ACTION_TYPE_CHANGED_NAME = 'CHANGED_NAME';
+
+function reducer(state, action) {
+  console.log(['Reducing', action]);
+  let newState;
+  if (action.type === ACTION_TYPE_INCREMENT_AGE) {
+    newState = {
+      ...state,
+      age: state.age + 1
+    };
+  } else if (action.type === ACTION_TYPE_CHANGED_NAME) {
+    newState = {
+      ...state,
+      name: action.nextName,
+    };
+  } else {
+    throw Error('Unknown action: ' + action.type);
+  }
+  console.log(['New state is', newState]);
+  return newState;
+}
 
 /**
  * The ElementEditor is used in the CMS to manage a list or nested lists of
  * elements for a page or other DataObject.
  */
-class ElementEditor extends PureComponent {
-  constructor(props) {
-    super(props);
+function ElementEditor({
+  fieldName,
+  formState,
+  areaId,
+  elementTypes,
+  isDraggingOver,
+  connectDropTarget,
+  allowedElements,
+}) {
+  const [contextState, setContextState] = useState(null);
+  const [dragTargetElementId, setDragTargetElementId] = useState(null);
+  const [dragSpot, setDragSpot] = useState(null);
 
-    this.state = {
-      dragTargetElementId: null,
-      dragSpot: null,
-    };
+  const [state, dispatch] = useReducer(reducer, { age: 42 });
 
-    this.handleDragOver = this.handleDragOver.bind(this);
-    this.handleDragEnd = this.handleDragEnd.bind(this);
+  function reloadDataFromServer() {
+    const url = loadElementSchemaValue('areasUrl', areaId);
+    apiGet(url)
+      .then(async (response) => await response.json())
+      .then((responseJson) => setContextState({...contextState, ...responseJson}))
   }
 
   /**
@@ -34,74 +87,101 @@ class ElementEditor extends PureComponent {
    *
    * This tracks the current hover target and whether it's above the top half of the target
    * or the bottom half.
-   *
-   * @param element
-   * @param isOverTop
    */
-  handleDragOver(element = null, isOverTop = null) {
+  function handleDragOver(element = null, isOverTop = null) {
     const id = element ? element.id : false;
-
-    this.setState({
-      dragTargetElementId: id,
-      dragSpot: isOverTop === false ? 'bottom' : 'top',
-    });
+    setDragTargetElementId(id);
+    setDragSpot(isOverTop === false ? 'bottom' : 'top');
   }
 
   /**
    * Hook for ReactDND triggered when a drag source is dropped onto a drag target.
    *
    * This will fire the GraphQL mutation for sorting and reset any state updates
-   *
-   * @param sourceId
-   * @param afterId
    */
-  handleDragEnd(sourceId, afterId) {
-    const { actions: { handleSortBlock }, areaId } = this.props;
-
+  function handleDragEnd(sourceId, afterId) {
+    // const { actions: { handleSortBlock }, areaId } = this.props;
     handleSortBlock(sourceId, afterId, areaId).then(() => {
       const preview = window.jQuery('.cms-preview');
       preview.entwine('ss.preview')._loadUrl(preview.find('iframe').attr('src'));
     });
-
-    this.setState({
-      dragTargetElementId: null,
-      dragSpot: null,
-    });
+    setDragTargetElementId(null);
+    setDragSpot(null);
   }
 
-  render() {
-    const {
-      fieldName,
-      formState,
-      ToolbarComponent,
-      ListComponent,
-      areaId,
-      elementTypes,
-      isDraggingOver,
-      connectDropTarget,
-      allowedElements,
-    } = this.props;
-    const { dragTargetElementId, dragSpot } = this.state;
+  function handleDragStart() {
+    // noop - wasn't in original class component
+  }
 
-    // Map the allowed elements because we want to retain the sort order provided by that array.
-    const allowedElementTypes = allowedElements.map(className =>
-      elementTypes.find(type => type.class === className)
-    );
+  // Map the allowed elements because we want to retain the sort order provided by that array.
+  const allowedElementTypes = allowedElements.map(className =>
+    elementTypes.find(type => type.class === className)
+  );
 
-    return connectDropTarget(
-      <div className="element-editor">
-        <ToolbarComponent
+  // Make initial request to API to get data for ElementalArea and populate context state
+  // The emtpy array 2nd param means this will only get called on 1st render
+  useEffect(() => reloadDataFromServer(), []);
+
+  //console.log(['ElementEditor contextState is', contextState]);
+  console.log(['ElementEditor formState is', formState]);
+
+  // todo reimplment connectDropTarget
+  //return connectDropTarget(
+  return (
+    <div className="element-editor">
+      <ElementEditorContext.Provider value={{
+        contextState,
+        setContextState,
+        reloadDataFromServer,
+        dispatch
+      }}>
+      <Toolbar
+        elementTypes={allowedElementTypes}
+        areaId={areaId}
+        onDragOver={handleDragOver}
+      />
+      <ElementList
+        allowedElementTypes={allowedElementTypes}
+        elementTypes={elementTypes}
+        areaId={areaId}
+        onDragOver={handleDragOver}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        dragSpot={dragSpot}
+        isDraggingOver={isDraggingOver}
+        dragTargetElementId={dragTargetElementId}
+      />
+      <ElementDragPreview elementTypes={elementTypes} />
+        <input
+          name={fieldName}
+          type="hidden"
+          value={JSON.stringify(formState) || ''}
+          className="no-change-track"
+        />
+      </ElementEditorContext.Provider>
+    </div>
+  );
+
+  function OLD_render() {
+    <div className="element-editor">
+      <ElementEditorContext.Provider value={{
+        contextState,
+        setContextState,
+        reloadDataFromServer,
+        dispatch
+      }}>
+        <Toolbar
           elementTypes={allowedElementTypes}
           areaId={areaId}
-          onDragOver={this.handleDragOver}
+          onDragOver={handleDragOver}
         />
-        <ListComponent
+        <ElementList
           allowedElementTypes={allowedElementTypes}
           elementTypes={elementTypes}
           areaId={areaId}
-          onDragOver={this.handleDragOver}
-          onDragStart={this.handleDragStart}
-          onDragEnd={this.handleDragEnd}
+          onDragOver={handleDragOver}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
           dragSpot={dragSpot}
           isDraggingOver={isDraggingOver}
           dragTargetElementId={dragTargetElementId}
@@ -113,10 +193,12 @@ class ElementEditor extends PureComponent {
           value={JSON.stringify(formState) || ''}
           className="no-change-track"
         />
-      </div>
-    );
+      </ElementEditorContext.Provider>
+    </div>
   }
 }
+
+
 
 ElementEditor.propTypes = {
   fieldName: PropTypes.string,
@@ -155,22 +237,25 @@ function mapStateToProps(state) {
   return { formState };
 }
 
+export default ElementEditor;
+
 export { ElementEditor as Component };
-export default compose(
-  withDragDropContext,
-  DropTarget('element', {}, (connector, monitor) => ({
-    connectDropTarget: connector.dropTarget(),
-    isDraggingOver: monitor.isOver(), // isDragging is not available on DropTargetMonitor
-  })),
-  connect(mapStateToProps),
-  inject(
-    ['ElementToolbar', 'ElementList'],
-    (ToolbarComponent, ListComponent) => ({
-      ToolbarComponent,
-      ListComponent,
-    }),
-    () => 'ElementEditor'
-  ),
-  sortBlockMutation
-)(ElementEditor);
+
+// export default compose(
+//   withDragDropContext,
+//   DropTarget('element', {}, (connector, monitor) => ({
+//     connectDropTarget: connector.dropTarget(),
+//     isDraggingOver: monitor.isOver(), // isDragging is not available on DropTargetMonitor
+//   })),
+//   connect(mapStateToProps),
+//   inject(
+//     ['ElementToolbar', 'ElementList'],
+//     (ToolbarComponent, ListComponent) => ({
+//       ToolbarComponent,
+//       ListComponent,
+//     }),
+//     () => 'ElementEditor'
+//   ),
+//   sortBlockMutation
+// )(ElementEditor);
 

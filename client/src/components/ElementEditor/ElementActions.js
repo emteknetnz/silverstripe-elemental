@@ -127,6 +127,7 @@ ElementActions.defaultProps = {
 
 export { ElementActions as Component };
 
+// Need ActionMenu from admin
 export default compose(
   inject(
     ['ActionMenu'],
@@ -137,3 +138,4 @@ export default compose(
   )
 )(ElementActions);
 
+// export default ElementActions;

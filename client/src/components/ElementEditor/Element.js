@@ -16,6 +16,9 @@ import { DragSource, DropTarget } from 'react-dnd';
 import { getEmptyImage } from 'react-dnd-html5-backend';
 import { elementDragSource, isOverTop } from 'lib/dragHelpers';
 
+import Content from 'components/ElementEditor/Content';
+import Header from 'components/ElementEditor/Header';
+
 /**
  * The Element component used in the context of an ElementEditor shows the summary
  * of an element's details when used in the CMS, including ID, Title and Summary.
@@ -257,7 +260,7 @@ class Element extends Component {
       title={this.getLinkTitle(type)}
       key={element.id}
     >
-      <HeaderComponent
+      <Header
         element={element}
         type={type}
         areaId={areaId}
@@ -272,7 +275,7 @@ class Element extends Component {
 
       {
         !childRenderingError &&
-        <ContentComponent
+        <Content
           id={element.id}
           fileUrl={element.blockSchema.fileURL}
           fileTitle={element.blockSchema.fileTitle}
@@ -388,22 +391,24 @@ const elementTarget = {
   },
 };
 
-export default compose(
-  DropTarget('element', elementTarget, (connector, monitor) => ({
-    connectDropTarget: connector.dropTarget(),
-    isOver: monitor.isOver(),
-  })),
-  DragSource('element', elementDragSource, (connector, monitor) => ({
-    connectDragSource: connector.dragSource(),
-    connectDragPreview: connector.dragPreview(),
-    isDragging: monitor.isDragging(),
-  })),
-  connect(mapStateToProps, mapDispatchToProps),
-  inject(
-    ['ElementHeader', 'ElementContent'],
-    (HeaderComponent, ContentComponent) => ({
-      HeaderComponent, ContentComponent,
-    }),
-    () => 'ElementEditor.ElementList.Element'
-  )
-)(Element);
+// export default compose(
+//   DropTarget('element', elementTarget, (connector, monitor) => ({
+//     connectDropTarget: connector.dropTarget(),
+//     isOver: monitor.isOver(),
+//   })),
+//   DragSource('element', elementDragSource, (connector, monitor) => ({
+//     connectDragSource: connector.dragSource(),
+//     connectDragPreview: connector.dragPreview(),
+//     isDragging: monitor.isDragging(),
+//   })),
+//   connect(mapStateToProps, mapDispatchToProps),
+//   inject(
+//     ['ElementHeader', 'ElementContent'],
+//     (HeaderComponent, ContentComponent) => ({
+//       HeaderComponent, ContentComponent,
+//     }),
+//     () => 'ElementEditor.ElementList.Element'
+//   )
+// )(Element);
+
+export default Element;

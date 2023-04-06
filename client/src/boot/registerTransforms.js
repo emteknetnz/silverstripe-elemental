@@ -11,6 +11,7 @@ import SaveAction from 'components/ElementActions/SaveAction';
 import UnpublishAction from 'components/ElementActions/UnpublishAction';
 
 export default () => {
+
   Injector.transform(
     'elemental-fieldgroup',
     (updater) => {
