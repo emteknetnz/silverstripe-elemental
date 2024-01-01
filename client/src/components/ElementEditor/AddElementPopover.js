@@ -6,6 +6,7 @@ import classNames from 'classnames';
 import { inject } from 'lib/Injector';
 import { elementTypeType } from 'types/elementTypeType';
 import i18n from 'i18n';
+import backend from 'lib/Backend';
 
 /**
  * The AddElementPopover component used in the context of an ElementEditor shows the
@@ -27,6 +28,7 @@ class AddElementPopover extends Component {
    */
   getGraphQLElementButtonClickHandler(elementType) {
     return (event) => {
+      // handleAddElementToArea comes from addElementMutation.js
       const {
         actions: { handleAddElementToArea },
         insertAfterElement
@@ -50,7 +52,22 @@ class AddElementPopover extends Component {
    * - also then update the preview via jquery/entwine
    */
   getElementButtonClickHandler(elementType) {
-    // todo
+    return (event) => {
+      event.preventDefault();
+      backend.post(`/admin/elemental-area/add/`,{
+        elementClass: elementType.class,
+        elementalAreaID: this.props.areaId,
+        insertAfterElementID: this.props.insertAfterElement,
+      })
+        .then(() => {
+          // todo call read blocks from area endpoint (areaID)
+        })
+        .then(() => {
+            const preview = window.jQuery('.cms-preview');
+            preview.entwine('ss.preview')._loadUrl(preview.find('iframe').attr('src'));
+        });
+      this.handleToggle();
+    };
   }
 
   /**
@@ -77,7 +94,7 @@ class AddElementPopover extends Component {
       extraClass
     );
 
-    const globalUseGraphQL = true;
+    const globalUseGraphQL = false;
 
     const buttons = elementTypes.map((elementType) => ({
       content: elementType.title,
