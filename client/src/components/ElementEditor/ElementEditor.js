@@ -10,7 +10,7 @@ import { DropTarget } from 'react-dnd';
 import sortBlockMutation from 'state/editor/sortBlockMutation';
 import ElementDragPreview from 'components/ElementEditor/ElementDragPreview';
 import withDragDropContext from 'lib/withDragDropContext';
-import { createSelector } from 'reselect';
+import backend from 'lib/Backend';
 
 /**
  * The ElementEditor is used in the CMS to manage a list or nested lists of
@@ -80,6 +80,16 @@ class ElementEditor extends PureComponent {
     });
   }
 
+  fetchBlocks() {
+    // # rpc
+    // todo
+    // make a call to readAll elements endpoint (areaID)
+    backend.get(`/admin/elemental-area/readBlocks/${this.props.areaId}`)
+      .then((response) => {
+        console.log('readBlocks', response);
+      });
+  }
+
   render() {
     const {
       fieldName,
@@ -93,6 +103,11 @@ class ElementEditor extends PureComponent {
       allowedElements,
     } = this.props;
     const { dragTargetElementId, dragSpot } = this.state;
+
+    const globalUseGraphqQL = true;
+    if (globalUseGraphqQL) {
+      this.fetchBlocks();
+    }
 
     // Map the allowed elements because we want to retain the sort order provided by that array.
     const allowedElementTypes = allowedElements.map(className =>
@@ -139,38 +154,20 @@ ElementEditor.propTypes = {
   }),
 };
 
-const defaultElementFormState = {};
-
-// Use a memoization to prevent mapStateToProps() re-rendering on formstate changes
-// Any formstate change, including unrelated ones such as from another FormBuilderLoader component
-// will trigger the ElementalEditor to re-render
-const elementFormSelector = createSelector([
-  (state) => {
-    const elementFormState = state.form.formState.element;
-
-    if (!elementFormState) {
-      // This needs to a reference to the defaultElementFormState variable rather than a new object
-      // or redux will think the state has changed and cause the component to re-render
-      return defaultElementFormState;
-    }
-
-    return elementFormState;
-  }], (elementFormState) => {
+function mapStateToProps(state) {
   const formNamePattern = loadElementFormStateName('[0-9]+');
+  const elementFormState = state.form.formState.element;
 
-  const filteredElementFormState = Object.keys(elementFormState)
+  if (!elementFormState) {
+    return {};
+  }
+
+  const formState = Object.keys(elementFormState)
     .filter(key => key.match(formNamePattern))
     .reduce((accumulator, key) => ({
-      ...accumulator,
-      [key]: elementFormState[key].values
+        ...accumulator,
+        [key]: elementFormState[key].values
     }), {});
-
-  return filteredElementFormState;
-});
-
-function mapStateToProps(state) {
-  // Memoize form state and value changes
-  const formState = elementFormSelector(state);
 
   return { formState };
 }
@@ -193,3 +190,4 @@ export default compose(
   ),
   sortBlockMutation
 )(ElementEditor);
+
