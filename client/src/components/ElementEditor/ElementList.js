@@ -9,6 +9,7 @@ import i18n from 'i18n';
 import { DropTarget } from 'react-dnd';
 import { getDragIndicatorIndex } from 'lib/dragHelpers';
 import { getElementTypeConfig } from 'state/editor/elementConfig';
+import { getConfig} from 'state/editor/elementConfig';
 
 class ElementList extends Component {
   constructor(props) {
@@ -17,8 +18,7 @@ class ElementList extends Component {
 
   getDragIndicatorIndex() {
     const { dragTargetElementId, draggedItem, blocks, contentBlocks, dragSpot } = this.props;
-    const globalUseGraphQL = false;
-    const elements = globalUseGraphQL ? blocks : contentBlocks;
+    const elements = getConfig().useGraphql ? blocks : contentBlocks;
     return getDragIndicatorIndex(
       elements.map(element => element.id),
       dragTargetElementId,
@@ -48,8 +48,7 @@ class ElementList extends Component {
       isDraggingOver,
     } = this.props;
 
-    const globalUseGraphQL = false;
-    const elements = globalUseGraphQL ? blocks : contentBlocks;
+    const elements = getConfig().useGraphql ? blocks : contentBlocks;
 
     // Blocks can be either null or an empty array
     if (!elements) {
@@ -111,8 +110,7 @@ class ElementList extends Component {
       isLoading, // rpc - passed in from ElementEditor
       LoadingComponent
     } = this.props;
-    const globalUseGraphQL = false;
-    const loadingValue = globalUseGraphQL ? loading : isLoading;
+    const loadingValue = getConfig().useGraphql ? loading : isLoading;
 
     if (loadingValue) {
       return <LoadingComponent />;
@@ -122,8 +120,7 @@ class ElementList extends Component {
 
   render() {
     const { blocks, contentBlocks } = this.props;
-    const globalUseGraphQL = false;
-    const elements = globalUseGraphQL ? blocks : contentBlocks;
+    const elements = getConfig().useGraphql ? blocks : contentBlocks;
 
     const listClassNames = classNames(
       'elemental-editor-list',
@@ -166,8 +163,7 @@ export { ElementList as Component };
 const elementListTarget = {
   drop(props, monitor) {
     const { blocks, contentBlocks } = props;
-    const globalUseGraphQL = false;
-    const elements = globalUseGraphQL ? blocks : contentBlocks;
+    const elements = getConfig().useGraphql ? blocks : contentBlocks;
 
     const elementTargetDropResult = monitor.getDropResult();
 

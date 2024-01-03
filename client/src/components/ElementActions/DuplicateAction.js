@@ -6,6 +6,7 @@ import duplicateBlockMutation from 'state/editor/duplicateBlockMutation';
 import i18n from 'i18n';
 import { ElementEditorContext } from 'components/ElementEditor/ElementEditor';
 import backend from 'lib/Backend';
+import { getConfig } from 'state/editor/elementConfig';
 
 /**
  * Adds the elemental menu action to duplicate a block
@@ -22,8 +23,7 @@ const DuplicateAction = (MenuComponent) => (props) => {
 
   const handleClick = (event) => {
     event.stopPropagation();
-    const globalUseGraphqQL = false;
-    if (globalUseGraphqQL) {
+    if (getConfig().useGraphql) {
       const { element: { id }, actions: { handleDuplicateBlock } } = props;
       if (handleDuplicateBlock) {
         handleDuplicateBlock(id).then(() => {
@@ -33,7 +33,8 @@ const DuplicateAction = (MenuComponent) => (props) => {
       }
     } else {
       const id = props.element.id;
-      backend.post('/admin/elemental-area/duplicate', {
+      const url = `${getConfig().controllerLink.replace(/\/$/, '')}/duplicate`;
+      backend.post(url, {
         ID: id,
       })
         .then(() => fetchBlocks());

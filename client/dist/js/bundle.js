@@ -238,11 +238,11 @@ var _UnpublishAction = __webpack_require__("./client/src/components/ElementActio
 
 var _UnpublishAction2 = _interopRequireDefault(_UnpublishAction);
 
+var _elementConfig = __webpack_require__("./client/src/state/editor/elementConfig.js");
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 exports.default = function () {
-
-  var globalUseGraphqQL = false;
 
   _Injector2.default.transform('elemental-fieldgroup', function (updater) {
     updater.component('FieldGroup.HistoryViewer.VersionDetail', _HistoricElementView2.default, 'HistoricElement');
@@ -258,13 +258,11 @@ exports.default = function () {
     updater.component('HistoryViewerToolbar.VersionedAdmin.HistoryViewer.Element.HistoryViewerVersionDetail', _revertToBlockVersionMutation2.default, 'BlockRevertMutation');
   });
 
-  if (globalUseGraphqQL) {
+  if ((0, _elementConfig.getConfig)().useGraphql) {
     _Injector2.default.transform('cms-element-editor', function (updater) {
       updater.component('ElementList', _readBlocksForAreaQuery2.default, 'PageElements');
     });
-  }
 
-  if (globalUseGraphqQL) {
     _Injector2.default.transform('cms-element-adder', function (updater) {
       updater.component('AddElementPopover', _addElementMutation2.default, 'ElementAddButton');
     });
@@ -393,6 +391,8 @@ var _Backend = __webpack_require__(8);
 
 var _Backend2 = _interopRequireDefault(_Backend);
 
+var _elementConfig = __webpack_require__("./client/src/state/editor/elementConfig.js");
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var ArchiveAction = function ArchiveAction(MenuComponent) {
@@ -410,8 +410,7 @@ var ArchiveAction = function ArchiveAction(MenuComponent) {
       if (!window.confirm(archiveMessage)) {
         return;
       }
-      var globalUseGraphqQL = false;
-      if (globalUseGraphqQL) {
+      if ((0, _elementConfig.getConfig)().useGraphql) {
         var id = props.element.id,
             handleArchiveBlock = props.actions.handleArchiveBlock;
 
@@ -423,7 +422,8 @@ var ArchiveAction = function ArchiveAction(MenuComponent) {
         }
       } else {
         var _id = props.element.id;
-        _Backend2.default.post('/admin/elemental-area/archive', {
+        var url = (0, _elementConfig.getConfig)().controllerLink.replace(/\/$/, '') + '/archive';
+        _Backend2.default.post(url, {
           ID: _id
         }).then(function () {
           return fetchBlocks();
@@ -492,6 +492,8 @@ var _Backend = __webpack_require__(8);
 
 var _Backend2 = _interopRequireDefault(_Backend);
 
+var _elementConfig = __webpack_require__("./client/src/state/editor/elementConfig.js");
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var DuplicateAction = function DuplicateAction(MenuComponent) {
@@ -505,8 +507,7 @@ var DuplicateAction = function DuplicateAction(MenuComponent) {
 
     var handleClick = function handleClick(event) {
       event.stopPropagation();
-      var globalUseGraphqQL = false;
-      if (globalUseGraphqQL) {
+      if ((0, _elementConfig.getConfig)().useGraphql) {
         var id = props.element.id,
             handleDuplicateBlock = props.actions.handleDuplicateBlock;
 
@@ -518,7 +519,8 @@ var DuplicateAction = function DuplicateAction(MenuComponent) {
         }
       } else {
         var _id = props.element.id;
-        _Backend2.default.post('/admin/elemental-area/duplicate', {
+        var url = (0, _elementConfig.getConfig)().controllerLink.replace(/\/$/, '') + '/duplicate';
+        _Backend2.default.post(url, {
           ID: _id
         }).then(function () {
           return fetchBlocks();
@@ -595,6 +597,8 @@ var _reduxForm = __webpack_require__(12);
 
 var _ElementEditor = __webpack_require__("./client/src/components/ElementEditor/ElementEditor.js");
 
+var _elementConfig = __webpack_require__("./client/src/state/editor/elementConfig.js");
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var reportPublicationStatus = function reportPublicationStatus(type, title, success) {
@@ -646,15 +650,15 @@ var PublishAction = function PublishAction(MenuComponent) {
 
 
     var publishElement = function publishElement() {
-      var globalUseGraphqQL = false;
-      if (globalUseGraphqQL) {
+      if ((0, _elementConfig.getConfig)().useGraphql) {
         var id = props.element.id,
-            handleArchiveBlock = props.actions.handleArchiveBlock;
+            handlePublishBlock = props.actions.handlePublishBlock;
 
-        return handleArchiveBlock(id);
+        return handlePublishBlock(id);
       } else {
         var _id = props.element.id;
-        return _Backend2.default.post('/admin/elemental-area/publish', {
+        var url = (0, _elementConfig.getConfig)().controllerLink.replace(/\/$/, '') + '/publish';
+        return _Backend2.default.post(url, {
           ID: _id
         }).then(function () {
           return fetchBlocks();
@@ -785,10 +789,15 @@ var _loadElementFormStateName = __webpack_require__("./client/src/state/editor/l
 
 var _reduxForm = __webpack_require__(12);
 
+var _ElementEditor = __webpack_require__("./client/src/components/ElementEditor/ElementEditor.js");
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var SaveAction = function SaveAction(MenuComponent) {
   return function (props) {
+    var _useContext = (0, _react.useContext)(_ElementEditor.ElementEditorContext),
+        fetchBlocks = _useContext.fetchBlocks;
+
     if (!props.expandable || props.type.broken) {
       return _react2.default.createElement(MenuComponent, props);
     }
@@ -822,8 +831,7 @@ var SaveAction = function SaveAction(MenuComponent) {
         apolloClient.queryManager.reFetchObservableQueries();
         reinitialiseForm(formData);
 
-        var preview = $('.cms-preview');
-        preview.entwine('ss.preview')._loadUrl(preview.find('iframe').attr('src'));
+        fetchBlocks();
 
         var newTitle = formData ? formData['PageElements_' + element.id + '_Title'] : null;
         $.noticeAdd({
@@ -920,14 +928,14 @@ var _Backend2 = _interopRequireDefault(_Backend);
 
 var _ElementEditor = __webpack_require__("./client/src/components/ElementEditor/ElementEditor.js");
 
+var _elementConfig = __webpack_require__("./client/src/state/editor/elementConfig.js");
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var UnpublishAction = function UnpublishAction(MenuComponent) {
   return function (props) {
     var _useContext = (0, _react.useContext)(_ElementEditor.ElementEditorContext),
         fetchBlocks = _useContext.fetchBlocks;
-
-    var globalUseGraphqQL = false;
 
     if (props.type.broken) {
       return _react2.default.createElement(MenuComponent, props);
@@ -945,7 +953,7 @@ var UnpublishAction = function UnpublishAction(MenuComponent) {
     };
 
     var unpublishElement = function unpublishElement() {
-      if (globalUseGraphqQL) {
+      if ((0, _elementConfig.getConfig)().useGraphql) {
         var id = props.element.id,
             handleUnpublishBlock = props.actions.handleUnpublishBlock;
 
@@ -955,7 +963,8 @@ var UnpublishAction = function UnpublishAction(MenuComponent) {
         });
       } else {
         var _id = props.element.id;
-        return _Backend2.default.post('/admin/elemental-area/unpublish', {
+        var url = (0, _elementConfig.getConfig)().controllerLink.replace(/\/$/, '') + '/unpublish';
+        return _Backend2.default.post(url, {
           ID: _id
         }).then(function () {
           return fetchBlocks();
@@ -1040,6 +1049,8 @@ var _Backend = __webpack_require__(8);
 var _Backend2 = _interopRequireDefault(_Backend);
 
 var _ElementEditor = __webpack_require__("./client/src/components/ElementEditor/ElementEditor.js");
+
+var _elementConfig = __webpack_require__("./client/src/state/editor/elementConfig.js");
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -1128,14 +1139,12 @@ var AddElementPopover = function (_Component) {
 
       var popoverClassNames = (0, _classnames2.default)('element-editor-add-element', extraClass);
 
-      var globalUseGraphQL = false;
-
       var buttons = elementTypes.map(function (elementType) {
         return {
           content: elementType.title,
           key: elementType.name,
           className: (0, _classnames2.default)(elementType.icon, 'btn--icon-xl', 'element-editor-add-element__button'),
-          onClick: globalUseGraphQL ? _this4.getGraphQLElementButtonClickHandler(elementType) : _this4.getElementButtonClickHandler(elementType)
+          onClick: (0, _elementConfig.getConfig)().useGraphql ? _this4.getGraphQLElementButtonClickHandler(elementType) : _this4.getElementButtonClickHandler(elementType)
         };
       });
 
@@ -2211,6 +2220,8 @@ var _Backend = __webpack_require__(8);
 
 var _Backend2 = _interopRequireDefault(_Backend);
 
+var _elementConfig = __webpack_require__("./client/src/state/editor/elementConfig.js");
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
@@ -2262,8 +2273,7 @@ var ElementEditor = function (_PureComponent) {
     value: function handleDragEnd(sourceId, afterId) {
       var _this2 = this;
 
-      var globalUseGraphQL = false;
-      if (globalUseGraphQL) {
+      if ((0, _elementConfig.getConfig)().useGraphql) {
         var _props = this.props,
             handleSortBlock = _props.actions.handleSortBlock,
             areaId = _props.areaId;
@@ -2273,7 +2283,8 @@ var ElementEditor = function (_PureComponent) {
           preview.entwine('ss.preview')._loadUrl(preview.find('iframe').attr('src'));
         });
       } else {
-        _Backend2.default.post('/admin/elemental-area/sort', {
+        var url = (0, _elementConfig.getConfig)().controllerLink.replace(/\/$/, '') + '/sort';
+        _Backend2.default.post(url, {
           ID: sourceId,
           afterBlockID: afterId
         }).then(function () {
@@ -2298,7 +2309,8 @@ var ElementEditor = function (_PureComponent) {
           isLoading: true
         }));
       }
-      _Backend2.default.get('/admin/elemental-area/readBlocks/' + this.props.areaId).then(function (response) {
+      var url = (0, _elementConfig.getConfig)().controllerLink.replace(/\/$/, '') + '/readBlocks/' + this.props.areaId;
+      _Backend2.default.get(url).then(function (response) {
         return response.json();
       }).then(function (responseJson) {
         _this3.setState(_extends({}, _this3.state, {
@@ -2330,8 +2342,7 @@ var ElementEditor = function (_PureComponent) {
           contentBlocks = _state.contentBlocks;
 
 
-      var globalUseGraphqQL = false;
-      if (!globalUseGraphqQL && contentBlocks === null) {
+      if (!(0, _elementConfig.getConfig)().useGraphql && contentBlocks === null) {
         this.fetchBlocks(false);
       }
 
@@ -2421,11 +2432,7 @@ var params = [_withDragDropContext2.default, (0, _reactDnd.DropTarget)('element'
   };
 }, function () {
   return 'ElementEditor';
-})];
-var globalUseGraphQL = false;
-if (globalUseGraphQL) {
-  params.push(_sortBlockMutation2.default);
-}
+}), _sortBlockMutation2.default];
 
 exports.default = _redux.compose.apply(undefined, params)(ElementEditor);
 
@@ -2503,8 +2510,7 @@ var ElementList = function (_Component) {
           contentBlocks = _props.contentBlocks,
           dragSpot = _props.dragSpot;
 
-      var globalUseGraphQL = false;
-      var elements = globalUseGraphQL ? blocks : contentBlocks;
+      var elements = (0, _elementConfig.getConfig)().useGraphql ? blocks : contentBlocks;
       return (0, _dragHelpers.getDragIndicatorIndex)(elements.map(function (element) {
         return element.id;
       }), dragTargetElementId, draggedItem && draggedItem.id, dragSpot);
@@ -2527,8 +2533,7 @@ var ElementList = function (_Component) {
           isDraggingOver = _props2.isDraggingOver;
 
 
-      var globalUseGraphQL = false;
-      var elements = globalUseGraphQL ? blocks : contentBlocks;
+      var elements = (0, _elementConfig.getConfig)().useGraphql ? blocks : contentBlocks;
 
       if (!elements) {
         return null;
@@ -2588,8 +2593,7 @@ var ElementList = function (_Component) {
           isLoading = _props3.isLoading,
           LoadingComponent = _props3.LoadingComponent;
 
-      var globalUseGraphQL = false;
-      var loadingValue = globalUseGraphQL ? loading : isLoading;
+      var loadingValue = (0, _elementConfig.getConfig)().useGraphql ? loading : isLoading;
 
       if (loadingValue) {
         return _react2.default.createElement(LoadingComponent, null);
@@ -2603,8 +2607,7 @@ var ElementList = function (_Component) {
           blocks = _props4.blocks,
           contentBlocks = _props4.contentBlocks;
 
-      var globalUseGraphQL = false;
-      var elements = globalUseGraphQL ? blocks : contentBlocks;
+      var elements = (0, _elementConfig.getConfig)().useGraphql ? blocks : contentBlocks;
 
       var listClassNames = (0, _classnames2.default)('elemental-editor-list', { 'elemental-editor-list--empty': !elements || !elements.length });
 
@@ -2648,8 +2651,7 @@ var elementListTarget = {
     var blocks = props.blocks,
         contentBlocks = props.contentBlocks;
 
-    var globalUseGraphQL = false;
-    var elements = globalUseGraphQL ? blocks : contentBlocks;
+    var elements = (0, _elementConfig.getConfig)().useGraphql ? blocks : contentBlocks;
 
     var elementTargetDropResult = monitor.getDropResult();
 

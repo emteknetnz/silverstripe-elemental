@@ -6,13 +6,13 @@ import unpublishBlockMutation from 'state/editor/unpublishBlockMutation';
 import i18n from 'i18n';
 import backend from 'lib/Backend';
 import { ElementEditorContext } from 'components/ElementEditor/ElementEditor';
+import { getConfig } from 'state/editor/elementConfig';
 
 /**
  * Adds the elemental menu action to unpublish a published block
  */
 const UnpublishAction = (MenuComponent) => (props) => {
   const { fetchBlocks } = useContext(ElementEditorContext);
-  const globalUseGraphqQL = false;
 
   if (props.type.broken) {
     // Don't allow this action for a broken element.
@@ -42,7 +42,7 @@ const UnpublishAction = (MenuComponent) => (props) => {
   }
 
   const unpublishElement = () => {
-    if (globalUseGraphqQL) {
+    if (getConfig().useGraphql) {
       const { element: { id }, actions: { handleUnpublishBlock } } = props;
       return handleUnpublishBlock(id)
         .then(() => {
@@ -51,7 +51,8 @@ const UnpublishAction = (MenuComponent) => (props) => {
         });
     } else {
       const id = props.element.id;
-      return backend.post('/admin/elemental-area/unpublish', {
+      const url = `${getConfig().controllerLink.replace(/\/$/, '')}/unpublish`;
+      return backend.post(url, {
         ID: id,
       })
         .then(() => fetchBlocks());

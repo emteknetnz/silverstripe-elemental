@@ -11,6 +11,7 @@ import sortBlockMutation from 'state/editor/sortBlockMutation';
 import ElementDragPreview from 'components/ElementEditor/ElementDragPreview';
 import withDragDropContext from 'lib/withDragDropContext';
 import backend from 'lib/Backend';
+import { getConfig} from 'state/editor/elementConfig';
 
 export const ElementEditorContext = createContext(null);
 
@@ -61,8 +62,7 @@ class ElementEditor extends PureComponent {
    * @param afterId
    */
   handleDragEnd(sourceId, afterId) {
-    const globalUseGraphQL = false;
-    if (globalUseGraphQL) {
+    if (getConfig().useGraphql) {
       // see sortBlockMutation.js for reference
       const { actions: { handleSortBlock }, areaId } = this.props;
       handleSortBlock(sourceId, afterId, areaId).then(() => {
@@ -70,7 +70,8 @@ class ElementEditor extends PureComponent {
         preview.entwine('ss.preview')._loadUrl(preview.find('iframe').attr('src'));
       });
     } else {
-      backend.post(`/admin/elemental-area/sort`, {
+      const url = `${getConfig().controllerLink.replace(/\/$/, '')}/sort`;
+      backend.post(url, {
         ID: sourceId,
         afterBlockID: afterId,
       })
@@ -94,7 +95,8 @@ class ElementEditor extends PureComponent {
         isLoading: true,
       });
     }
-    backend.get(`/admin/elemental-area/readBlocks/${this.props.areaId}`)
+    const url = `${getConfig().controllerLink.replace(/\/$/, '')}/readBlocks/${this.props.areaId}`;
+    backend.get(url)
       .then(response => response.json())
       .then(responseJson => {
         this.setState({
@@ -123,8 +125,7 @@ class ElementEditor extends PureComponent {
     } = this.props;
     const { dragTargetElementId, dragSpot, contentBlocks } = this.state;
 
-    const globalUseGraphqQL = false;
-    if (!globalUseGraphqQL && contentBlocks === null) {
+    if (!getConfig().useGraphql && contentBlocks === null) {
       this.fetchBlocks(false);
     }
 
@@ -211,12 +212,8 @@ const params = [
       ListComponent,
     }),
     () => 'ElementEditor'
-  )
+  ),
+  sortBlockMutation
 ];
-const globalUseGraphQL = false;
-if (globalUseGraphQL) {
-  params.push(sortBlockMutation);
-}
 
 export default compose(...params)(ElementEditor);
-

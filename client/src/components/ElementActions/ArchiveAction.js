@@ -6,6 +6,7 @@ import archiveBlockMutation from 'state/editor/archiveBlockMutation';
 import i18n from 'i18n';
 import { ElementEditorContext } from 'components/ElementEditor/ElementEditor';
 import backend from 'lib/Backend';
+import { getConfig } from 'state/editor/elementConfig';
 
 /**
  * Adds the elemental menu action to archive a block of any state
@@ -29,8 +30,7 @@ const ArchiveAction = (MenuComponent) => (props) => {
     if (!window.confirm(archiveMessage)) {
       return;
     }
-    const globalUseGraphqQL = false;
-    if (globalUseGraphqQL) {
+    if (getConfig().useGraphql) {
       const { element: { id }, actions: { handleArchiveBlock } } = props;
       // eslint-disable-next-line no-alert
       if (handleArchiveBlock) {
@@ -41,7 +41,8 @@ const ArchiveAction = (MenuComponent) => (props) => {
       }
     } else {
       const id = props.element.id;
-      backend.post(`/admin/elemental-area/archive`, {
+      const url = `${getConfig().controllerLink.replace(/\/$/, '')}/archive`;
+      backend.post(url, {
         ID: id,
       })
         .then(() => fetchBlocks());
