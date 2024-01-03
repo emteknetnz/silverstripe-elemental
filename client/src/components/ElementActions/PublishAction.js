@@ -10,6 +10,7 @@ import { loadElementSchemaValue } from 'state/editor/loadElementSchemaValue';
 import { loadElementFormStateName } from 'state/editor/loadElementFormStateName';
 import { initialize } from 'redux-form';
 import { ElementEditorContext } from 'components/ElementEditor/ElementEditor';
+import { getConfig } from 'state/editor/elementConfig';
 
 /**
  * Show a toast message reporting whether publication of Element was successful
@@ -89,13 +90,13 @@ const PublishAction = (MenuComponent) => (props) => {
   const { element, formDirty } = props;
 
   const publishElement = () => {
-    const globalUseGraphqQL = false;
-    if (globalUseGraphqQL) {
-      const { element: { id }, actions: { handleArchiveBlock } } = props;
-      return handleArchiveBlock(id);
+    if (getConfig().useGraphql) {
+      const { element: { id }, actions: { handlePublishBlock } } = props;
+      return handlePublishBlock(id);
     } else {
       const id = props.element.id;
-      return backend.post('/admin/elemental-area/publish', {
+      const url = `${getConfig().controllerLink.replace(/\/$/, '')}/publish`;
+      return backend.post(url, {
         ID: id,
       })
         .then(() => fetchBlocks());
@@ -186,7 +187,7 @@ function mapDispatchToProps(dispatch, ownProps) {
 export { PublishAction as Component };
 
 export default compose(
-  publishBlockMutation, // todo
+  publishBlockMutation,
   connect(mapStateToProps, mapDispatchToProps),
   PublishAction
 );

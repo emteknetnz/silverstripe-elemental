@@ -9,10 +9,9 @@ import DuplicateAction from 'components/ElementActions/DuplicateAction';
 import PublishAction from 'components/ElementActions/PublishAction';
 import SaveAction from 'components/ElementActions/SaveAction';
 import UnpublishAction from 'components/ElementActions/UnpublishAction';
+import { getConfig} from 'state/editor/elementConfig';
 
 export default () => {
-
-  const globalUseGraphqQL = false;
 
   Injector.transform(
     'elemental-fieldgroup',
@@ -52,7 +51,7 @@ export default () => {
     }
   );
 
-  if (globalUseGraphqQL) {
+  if (getConfig().useGraphql) {
     Injector.transform(
       'cms-element-editor',
       (updater) => {
@@ -64,9 +63,7 @@ export default () => {
         );
       }
     );
-  }
 
-  if (globalUseGraphqQL) {
     Injector.transform(
       'cms-element-adder',
       (updater) => {

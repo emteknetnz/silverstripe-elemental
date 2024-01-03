@@ -44,6 +44,8 @@ class ElementalAreaController extends CMSMain
         'POST archive' => 'apiArchive',
         'POST publish' => 'apiPublish',
         'POST unpublish' => 'apiUnpublish',
+        // todo
+        'POST revert' => 'apiRevert',
     ];
 
     private static $allowed_actions = [
@@ -59,8 +61,14 @@ class ElementalAreaController extends CMSMain
         'apiArchive',
         'apiPublish',
         'apiUnpublish',
-        'revert', // todo - revert mutation is used in history viewer (versioned-admin)
+        // todo - revert mutation is used in history viewer (versioned-admin) see ReadHistoryViewerBlock.js
+        'apiRevert',
     ];
+
+    /**
+     * This should get moved to silverstripe/admin once other modules have dual-api support
+     */
+    private static $use_graphql = false;
 
     private function jsonResponse(int $statusCode = 200, ?array $data = null, string $message = ''): HTTPResponse
     {
@@ -307,6 +315,10 @@ class ElementalAreaController extends CMSMain
             'payloadFormat' => 'json',
             'formNameTemplate' => sprintf(static::FORM_NAME_TEMPLATE ?? '', '{id}'),
         ];
+        $clientConfig['controllerLink'] = $this->Link();
+
+        // this should get moved to silverstripe/admin once other modules have dual-api support
+        $clientConfig['useGraphql'] = self::config()->get('use_graphql');
 
         // Configuration that is available per element type
         $clientConfig['elementTypes'] = ElementTypeRegistry::generate()->getDefinitions();

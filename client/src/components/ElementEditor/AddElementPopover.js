@@ -8,6 +8,7 @@ import { elementTypeType } from 'types/elementTypeType';
 import i18n from 'i18n';
 import backend from 'lib/Backend';
 import { ElementEditorContext } from 'components/ElementEditor/ElementEditor';
+import { getConfig} from 'state/editor/elementConfig';
 
 /**
  * The AddElementPopover component used in the context of an ElementEditor shows the
@@ -99,13 +100,11 @@ class AddElementPopover extends Component {
       extraClass
     );
 
-    const globalUseGraphQL = false;
-
     const buttons = elementTypes.map((elementType) => ({
       content: elementType.title,
       key: elementType.name,
       className: classNames(elementType.icon, 'btn--icon-xl', 'element-editor-add-element__button'),
-      onClick: globalUseGraphQL
+      onClick: getConfig().useGraphql
         ? this.getGraphQLElementButtonClickHandler(elementType)
         : this.getElementButtonClickHandler(elementType),
     }));
