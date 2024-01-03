@@ -791,6 +791,8 @@ var _reduxForm = __webpack_require__(12);
 
 var _ElementEditor = __webpack_require__("./client/src/components/ElementEditor/ElementEditor.js");
 
+var _elementConfig = __webpack_require__("./client/src/state/editor/elementConfig.js");
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var SaveAction = function SaveAction(MenuComponent) {
@@ -826,10 +828,12 @@ var SaveAction = function SaveAction(MenuComponent) {
 
       var endpoint = _Backend2.default.createEndpointFetcher(endpointSpec);
       endpoint(formData).then(function () {
-        var apolloClient = window.ss.apolloClient;
+        if ((0, _elementConfig.getConfig)().useGraphql) {
+          var apolloClient = window.ss.apolloClient;
 
-        apolloClient.queryManager.reFetchObservableQueries();
-        reinitialiseForm(formData);
+          apolloClient.queryManager.reFetchObservableQueries();
+          reinitialiseForm(formData);
+        }
 
         fetchBlocks();
 

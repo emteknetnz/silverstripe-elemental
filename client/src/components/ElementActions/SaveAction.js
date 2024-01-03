@@ -9,6 +9,7 @@ import { loadElementSchemaValue } from 'state/editor/loadElementSchemaValue';
 import { loadElementFormStateName } from 'state/editor/loadElementFormStateName';
 import { initialize } from 'redux-form';
 import { ElementEditorContext } from 'components/ElementEditor/ElementEditor';
+import { getConfig } from 'state/editor/elementConfig';
 
 /**
  * Using a REST backend, serialize the current form data and post it to the backend endpoint to save
@@ -50,13 +51,14 @@ const SaveAction = (MenuComponent) => (props) => {
     const endpoint = backend.createEndpointFetcher(endpointSpec);
     endpoint(formData)
       .then(() => {
-        // Update the Apollo query cache with the new form data
-        const { apolloClient } = window.ss;
-
-        // @todo optimistically update the data for the current element instead of
-        // rerunning the whole query
-        apolloClient.queryManager.reFetchObservableQueries();
-        reinitialiseForm(formData);
+        if (getConfig().useGraphql) {
+          // Update the Apollo query cache with the new form data
+          const { apolloClient } = window.ss;
+          // @todo optimistically update the data for the current element instead of
+          // rerunning the whole query
+          apolloClient.queryManager.reFetchObservableQueries();
+          reinitialiseForm(formData);
+        }
 
         fetchBlocks();
 
