@@ -130,7 +130,6 @@ const PublishAction = (MenuComponent) => (props) => {
 
     // Perform publish. Data is assumed to be up to date
     actionFlow
-      // .then(() => handlePublishBlock(id))
       .then(() => publishElement())
       .then(() => reportPublicationStatus(type.title, title, true))
       .catch(() => reportPublicationStatus(type.title, title, false));
