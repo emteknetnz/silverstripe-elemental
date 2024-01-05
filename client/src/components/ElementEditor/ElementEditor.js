@@ -1,5 +1,5 @@
 /* global window */
-import React, { PureComponent } from 'react';
+import React, { PureComponent, createContext } from 'react';
 import PropTypes from 'prop-types';
 import { inject } from 'lib/Injector';
 import { compose } from 'redux';
@@ -10,6 +10,10 @@ import { DropTarget } from 'react-dnd';
 import sortBlockMutation from 'state/editor/sortBlockMutation';
 import ElementDragPreview from 'components/ElementEditor/ElementDragPreview';
 import withDragDropContext from 'lib/withDragDropContext';
+import backend from 'lib/Backend';
+import { getConfig} from 'state/editor/elementConfig';
+
+export const ElementEditorContext = createContext(null);
 
 /**
  * The ElementEditor is used in the CMS to manage a list or nested lists of
@@ -22,10 +26,13 @@ class ElementEditor extends PureComponent {
     this.state = {
       dragTargetElementId: null,
       dragSpot: null,
+      contentBlocks: null,
+      isLoading: true,
     };
 
     this.handleDragOver = this.handleDragOver.bind(this);
     this.handleDragEnd = this.handleDragEnd.bind(this);
+    this.fetchBlocks = this.fetchBlocks.bind(this);
   }
 
   /**
@@ -55,17 +62,52 @@ class ElementEditor extends PureComponent {
    * @param afterId
    */
   handleDragEnd(sourceId, afterId) {
-    const { actions: { handleSortBlock }, areaId } = this.props;
-
-    handleSortBlock(sourceId, afterId, areaId).then(() => {
-      const preview = window.jQuery('.cms-preview');
-      preview.entwine('ss.preview')._loadUrl(preview.find('iframe').attr('src'));
-    });
+    if (getConfig().useGraphql) {
+      // see sortBlockMutation.js for reference
+      const { actions: { handleSortBlock }, areaId } = this.props;
+      handleSortBlock(sourceId, afterId, areaId).then(() => {
+        const preview = window.jQuery('.cms-preview');
+        preview.entwine('ss.preview')._loadUrl(preview.find('iframe').attr('src'));
+      });
+    } else {
+      const url = `${getConfig().controllerLink.replace(/\/$/, '')}/sort`;
+      backend.post(url, {
+        ID: sourceId,
+        afterBlockID: afterId,
+      })
+        .then(() => this.fetchBlocks());
+    }
 
     this.setState({
       dragTargetElementId: null,
       dragSpot: null,
     });
+  }
+
+  /**
+   * # rpc
+   * make a call to readAll elements endpoint (areaID)
+   */
+  fetchBlocks(doSetLoadingState = true) {
+    if (doSetLoadingState) {
+      this.setState({
+        ...this.state,
+        isLoading: true,
+      });
+    }
+    const url = `${getConfig().controllerLink.replace(/\/$/, '')}/readBlocks/${this.props.areaId}`;
+    backend.get(url)
+      .then(response => response.json())
+      .then(responseJson => {
+        this.setState({
+          ...this.state,
+          contentBlocks: responseJson,
+          isLoading: false,
+        })
+        // refresh preview
+        const preview = window.jQuery('.cms-preview');
+        preview.entwine('ss.preview')._loadUrl(preview.find('iframe').attr('src'));
+      });
   }
 
   render() {
@@ -79,8 +121,13 @@ class ElementEditor extends PureComponent {
       isDraggingOver,
       connectDropTarget,
       allowedElements,
+      isLoading,
     } = this.props;
-    const { dragTargetElementId, dragSpot } = this.state;
+    const { dragTargetElementId, dragSpot, contentBlocks } = this.state;
+
+    if (!getConfig().useGraphql && contentBlocks === null) {
+      this.fetchBlocks(false);
+    }
 
     // Map the allowed elements because we want to retain the sort order provided by that array.
     const allowedElementTypes = allowedElements.map(className =>
@@ -89,29 +136,33 @@ class ElementEditor extends PureComponent {
 
     return connectDropTarget(
       <div className="element-editor">
-        <ToolbarComponent
-          elementTypes={allowedElementTypes}
-          areaId={areaId}
-          onDragOver={this.handleDragOver}
-        />
-        <ListComponent
-          allowedElementTypes={allowedElementTypes}
-          elementTypes={elementTypes}
-          areaId={areaId}
-          onDragOver={this.handleDragOver}
-          onDragStart={this.handleDragStart}
-          onDragEnd={this.handleDragEnd}
-          dragSpot={dragSpot}
-          isDraggingOver={isDraggingOver}
-          dragTargetElementId={dragTargetElementId}
-        />
-        <ElementDragPreview elementTypes={elementTypes} />
-        <input
-          name={fieldName}
-          type="hidden"
-          value={JSON.stringify(formState) || ''}
-          className="no-change-track"
-        />
+        <ElementEditorContext.Provider value={{ fetchBlocks: this.fetchBlocks }}>
+          <ToolbarComponent
+            elementTypes={allowedElementTypes}
+            areaId={areaId}
+            onDragOver={this.handleDragOver}
+          />
+          <ListComponent
+            allowedElementTypes={allowedElementTypes}
+            elementTypes={elementTypes}
+            areaId={areaId}
+            onDragOver={this.handleDragOver}
+            onDragStart={this.handleDragStart}
+            onDragEnd={this.handleDragEnd}
+            dragSpot={dragSpot}
+            isDraggingOver={isDraggingOver}
+            dragTargetElementId={dragTargetElementId}
+            contentBlocks={contentBlocks}
+            isLoading={isLoading}
+          />
+          <ElementDragPreview elementTypes={elementTypes} />
+          <input
+            name={fieldName}
+            type="hidden"
+            value={JSON.stringify(formState) || ''}
+            className="no-change-track"
+          />
+        </ElementEditorContext.Provider>
       </div>
     );
   }
@@ -146,7 +197,8 @@ function mapStateToProps(state) {
 }
 
 export { ElementEditor as Component };
-export default compose(
+
+const params = [
   withDragDropContext,
   DropTarget('element', {}, (connector, monitor) => ({
     connectDropTarget: connector.dropTarget(),
@@ -162,5 +214,6 @@ export default compose(
     () => 'ElementEditor'
   ),
   sortBlockMutation
-)(ElementEditor);
+];
 
+export default compose(...params)(ElementEditor);

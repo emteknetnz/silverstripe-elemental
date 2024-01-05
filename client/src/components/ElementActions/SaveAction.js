@@ -1,5 +1,5 @@
 /* global window */
-import React from 'react';
+import React, { useContext } from 'react';
 import { compose } from 'redux';
 import { connect } from 'react-redux';
 import AbstractAction from 'components/ElementActions/AbstractAction';
@@ -8,12 +8,16 @@ import i18n from 'i18n';
 import { loadElementSchemaValue } from 'state/editor/loadElementSchemaValue';
 import { loadElementFormStateName } from 'state/editor/loadElementFormStateName';
 import { initialize } from 'redux-form';
+import { ElementEditorContext } from 'components/ElementEditor/ElementEditor';
+import { getConfig } from 'state/editor/elementConfig';
 
 /**
  * Using a REST backend, serialize the current form data and post it to the backend endpoint to save
  * the inline edit form's data for the current block.
  */
 const SaveAction = (MenuComponent) => (props) => {
+  const { fetchBlocks } = useContext(ElementEditorContext);
+
   if (!props.expandable || props.type.broken) {
     // Some elemental blocks can not be edited inline (e.g. User form blocks)
     // We don't want to add a "Save" action for those blocks.
@@ -47,16 +51,16 @@ const SaveAction = (MenuComponent) => (props) => {
     const endpoint = backend.createEndpointFetcher(endpointSpec);
     endpoint(formData)
       .then(() => {
-        // Update the Apollo query cache with the new form data
-        const { apolloClient } = window.ss;
+        if (getConfig().useGraphql) {
+          // Update the Apollo query cache with the new form data
+          const { apolloClient } = window.ss;
+          // @todo optimistically update the data for the current element instead of
+          // rerunning the whole query
+          apolloClient.queryManager.reFetchObservableQueries();
+          reinitialiseForm(formData);
+        }
 
-        // @todo optimistically update the data for the current element instead of
-        // rerunning the whole query
-        apolloClient.queryManager.reFetchObservableQueries();
-        reinitialiseForm(formData);
-
-        const preview = $('.cms-preview');
-        preview.entwine('ss.preview')._loadUrl(preview.find('iframe').attr('src'));
+        fetchBlocks();
 
         const newTitle = formData ? formData[`PageElements_${element.id}_Title`] : null;
         $.noticeAdd({

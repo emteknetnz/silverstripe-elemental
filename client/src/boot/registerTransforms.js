@@ -2,6 +2,7 @@ import Injector from 'lib/Injector';
 import readOneBlockQuery from 'state/history/readOneBlockQuery';
 import HistoricElementViewFactory from 'components/HistoricElementView/HistoricElementView';
 import revertToBlockVersionMutation from 'state/history/revertToBlockVersionMutation';
+import revertToBlockVersionRequest from 'state/history/revertToBlockVersionRequest';
 import readBlocksForAreaQuery from 'state/editor/readBlocksForAreaQuery';
 import addElementToArea from 'state/editor/addElementMutation';
 import ArchiveAction from 'components/ElementActions/ArchiveAction';
@@ -9,8 +10,10 @@ import DuplicateAction from 'components/ElementActions/DuplicateAction';
 import PublishAction from 'components/ElementActions/PublishAction';
 import SaveAction from 'components/ElementActions/SaveAction';
 import UnpublishAction from 'components/ElementActions/UnpublishAction';
+import { getConfig} from 'state/editor/elementConfig';
 
 export default () => {
+
   Injector.transform(
     'elemental-fieldgroup',
     (updater) => {
@@ -37,41 +40,61 @@ export default () => {
     }
   );
 
-  Injector.transform(
-    'blocks-history-revert',
-    (updater) => {
-      // Add block element revert GraphQL mutation to the HistoryViewerToolbar
-      updater.component(
-        'HistoryViewerToolbar.VersionedAdmin.HistoryViewer.Element.HistoryViewerVersionDetail',
-        revertToBlockVersionMutation,
-        'BlockRevertMutation'
-      );
-    }
-  );
+  // REST
+  if (!getConfig().useGraphql) {
+    Injector.transform(
+      'blocks-history-revert',
+      (updater) => {
+        // Add revertToVersion() to props.actions on HistoryViewerToolbar
+        updater.component(
+          'HistoryViewerToolbar.VersionedAdmin.HistoryViewer.Element.HistoryViewerVersionDetail',
+          revertToBlockVersionRequest,
+          'BlockRevertRequest'
+        );
+      }
+    );
+  }
 
-  Injector.transform(
-    'cms-element-editor',
-    (updater) => {
-      // Add GraphQL query for reading elements on a page for the ElementEditor
-      updater.component(
-        'ElementList',
-        readBlocksForAreaQuery,
-        'PageElements'
-      );
-    }
-  );
+  // GRAPHQL
+  if (getConfig().useGraphql) {
+    Injector.transform(
+      'blocks-history-revert',
+      (updater) => {
+        // Add block element revert GraphQL mutation to the HistoryViewerToolbar
+        // This is the yellow revert button at the bottom on
+        // /admin/pages/edit/EditForm/6/field/ElementalArea/item/2/edit#Root_History
+        updater.component(
+          'HistoryViewerToolbar.VersionedAdmin.HistoryViewer.Element.HistoryViewerVersionDetail',
+          revertToBlockVersionMutation,
+          'BlockRevertMutation'
+        );
+      }
+    );
 
-  Injector.transform(
-    'cms-element-adder',
-    (updater) => {
-      // Add GraphQL query for adding elements to an ElementEditor (ElementalArea)
-      updater.component(
-        'AddElementPopover',
-        addElementToArea,
-        'ElementAddButton'
-      );
-    }
-  );
+    Injector.transform(
+      'cms-element-editor',
+      (updater) => {
+        // Add GraphQL query for reading elements on a page for the ElementEditor
+        updater.component(
+          'ElementList',
+          readBlocksForAreaQuery,
+          'PageElements'
+        );
+      }
+    );
+
+    Injector.transform(
+      'cms-element-adder',
+      (updater) => {
+        // Add GraphQL query for adding elements to an ElementEditor (ElementalArea)
+        updater.component(
+          'AddElementPopover',
+          addElementToArea,
+          'ElementAddButton'
+        );
+      }
+    );
+  }
 
   // Add elemental editor actions
   Injector.transform('element-actions', (updater) => {

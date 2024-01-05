@@ -9,12 +9,18 @@ import i18n from 'i18n';
 import { DropTarget } from 'react-dnd';
 import { getDragIndicatorIndex } from 'lib/dragHelpers';
 import { getElementTypeConfig } from 'state/editor/elementConfig';
+import { getConfig} from 'state/editor/elementConfig';
 
 class ElementList extends Component {
+  constructor(props) {
+    super(props);
+  }
+
   getDragIndicatorIndex() {
-    const { dragTargetElementId, draggedItem, blocks, dragSpot } = this.props;
+    const { dragTargetElementId, draggedItem, blocks, contentBlocks, dragSpot } = this.props;
+    const elements = getConfig().useGraphql ? blocks : contentBlocks;
     return getDragIndicatorIndex(
-      blocks.map(element => element.id),
+      elements.map(element => element.id),
       dragTargetElementId,
       draggedItem && draggedItem.id,
       dragSpot
@@ -31,7 +37,8 @@ class ElementList extends Component {
       ElementComponent,
       HoverBarComponent,
       DragIndicatorComponent,
-      blocks,
+      blocks, // graphql - comes from readBlocksForAreaQuery
+      contentBlocks, // rpc, passed in as prop from ElementEditor
       allowedElementTypes,
       elementTypes,
       areaId,
@@ -41,16 +48,18 @@ class ElementList extends Component {
       isDraggingOver,
     } = this.props;
 
+    const elements = getConfig().useGraphql ? blocks : contentBlocks;
+
     // Blocks can be either null or an empty array
-    if (!blocks) {
+    if (!elements) {
       return null;
     }
 
-    if (blocks && !blocks.length) {
+    if (elements && !elements.length) {
       return <div>{i18n._t('ElementList.ADD_BLOCKS', 'Add blocks to place your content')}</div>;
     }
 
-    let output = blocks.map((element) => (
+    let output = elements.map((element) => (
       <div key={element.id}>
         <ElementComponent
           element={element}
@@ -96,19 +105,26 @@ class ElementList extends Component {
    * @returns {LoadingComponent|null}
    */
   renderLoading() {
-    const { loading, LoadingComponent } = this.props;
+    const {
+      loading, // graphql - see readBlocksForAreaQuery
+      isLoading, // rpc - passed in from ElementEditor
+      LoadingComponent
+    } = this.props;
+    const loadingValue = getConfig().useGraphql ? loading : isLoading;
 
-    if (loading) {
+    if (loadingValue) {
       return <LoadingComponent />;
     }
     return null;
   }
 
   render() {
-    const { blocks } = this.props;
+    const { blocks, contentBlocks } = this.props;
+    const elements = getConfig().useGraphql ? blocks : contentBlocks;
+
     const listClassNames = classNames(
       'elemental-editor-list',
-      { 'elemental-editor-list--empty': !blocks || !blocks.length }
+      { 'elemental-editor-list--empty': !elements || !elements.length }
     );
 
     return this.props.connectDropTarget(
@@ -121,11 +137,15 @@ class ElementList extends Component {
 }
 
 ElementList.propTypes = {
-  // @todo support either ElementList or Element children in an array (or both)
+  // graphql
+  // blocks and loading come from readBlocksForAreaQuery
   blocks: PropTypes.arrayOf(elementType),
+  loading: PropTypes.bool,
+  // rpc
+  contentBlocks: PropTypes.arrayOf(elementType),
+  //
   elementTypes: PropTypes.arrayOf(elementTypeType).isRequired,
   allowedElementTypes: PropTypes.arrayOf(elementTypeType).isRequired,
-  loading: PropTypes.bool,
   areaId: PropTypes.number.isRequired,
   dragTargetElementId: PropTypes.oneOfType([PropTypes.string, PropTypes.bool]),
   onDragOver: PropTypes.func,
@@ -142,7 +162,9 @@ export { ElementList as Component };
 
 const elementListTarget = {
   drop(props, monitor) {
-    const { blocks } = props;
+    const { blocks, contentBlocks } = props;
+    const elements = getConfig().useGraphql ? blocks : contentBlocks;
+
     const elementTargetDropResult = monitor.getDropResult();
 
     if (!elementTargetDropResult) {
@@ -150,12 +172,12 @@ const elementListTarget = {
     }
 
     const dropIndex = getDragIndicatorIndex(
-      blocks.map(element => element.id),
+      elements.map(element => element.id),
       elementTargetDropResult.target,
       monitor.getItem(),
       elementTargetDropResult.dropSpot,
     );
-    const dropAfterID = blocks[dropIndex - 1] ? blocks[dropIndex - 1].id : '0';
+    const dropAfterID = elements[dropIndex - 1] ? elements[dropIndex - 1].id : '0';
 
     return {
       ...elementTargetDropResult,

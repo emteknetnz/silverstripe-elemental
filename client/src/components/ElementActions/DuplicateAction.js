@@ -1,14 +1,19 @@
 /* global window */
-import React from 'react';
+import React, { useContext } from 'react';
 import { compose } from 'redux';
 import AbstractAction from 'components/ElementActions/AbstractAction';
 import duplicateBlockMutation from 'state/editor/duplicateBlockMutation';
 import i18n from 'i18n';
+import { ElementEditorContext } from 'components/ElementEditor/ElementEditor';
+import backend from 'lib/Backend';
+import { getConfig } from 'state/editor/elementConfig';
 
 /**
  * Adds the elemental menu action to duplicate a block
  */
 const DuplicateAction = (MenuComponent) => (props) => {
+  const { fetchBlocks } = useContext(ElementEditorContext);
+
   if (props.type.broken) {
     // Don't allow this action for a broken element.
     return (
@@ -18,16 +23,23 @@ const DuplicateAction = (MenuComponent) => (props) => {
 
   const handleClick = (event) => {
     event.stopPropagation();
-
-    const { element: { id }, actions: { handleDuplicateBlock } } = props;
-
-    if (handleDuplicateBlock) {
-      handleDuplicateBlock(id).then(() => {
-        const preview = window.jQuery('.cms-preview');
-        preview.entwine('ss.preview')._loadUrl(preview.find('iframe').attr('src'));
-      });
+    if (getConfig().useGraphql) {
+      const { element: { id }, actions: { handleDuplicateBlock } } = props;
+      if (handleDuplicateBlock) {
+        handleDuplicateBlock(id).then(() => {
+          const preview = window.jQuery('.cms-preview');
+          preview.entwine('ss.preview')._loadUrl(preview.find('iframe').attr('src'));
+        });
+      }
+    } else {
+      const id = props.element.id;
+      const url = `${getConfig().controllerLink.replace(/\/$/, '')}/duplicate`;
+      backend.post(url, {
+        ID: id,
+      })
+        .then(() => fetchBlocks());
     }
-  };
+  }
 
   const disabled = props.element.canCreate !== undefined && !props.element.canCreate;
   const label = i18n._t('ElementArchiveAction.DUPLICATE', 'Duplicate');
