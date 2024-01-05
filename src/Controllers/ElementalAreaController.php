@@ -20,6 +20,7 @@ use DNADesign\Elemental\Models\ElementalArea;
 use DNADesign\Elemental\Services\ReorderElements;
 use SilverStripe\Control\Controller;
 use SilverStripe\Control\Director;
+use SilverStripe\Versioned\Versioned;
 
 /**
  * Controller for "ElementalArea" - handles loading and saving of in-line edit forms in an elemental area in admin
@@ -93,9 +94,48 @@ class ElementalAreaController extends CMSMain
         return $postData;
     }
 
+    // VersionedResolver resolveCopyToStage()
     public function apiRevert(): HTTPResponse
     {
-        
+        $postData = $this->getPostData();
+        $id = $postData['ID'] ?? '';
+        $fromVersion = (int) $postData['fromVersion'] ?? 0;
+        $fromStage = ucfirst(strtolower($postData['fromStage'])) ?? '';
+        if ($fromStage === 'Draft') {
+            $fromStage = 'Stage';
+        }
+        $toStage = ucfirst(strtolower($postData['toStage'])) ?? '';
+        if ($toStage === 'Draft') {
+            $toStage = 'Stage';
+        }
+        if (!in_array($fromStage, ['', Versioned::DRAFT, Versioned::LIVE])
+            || !in_array($toStage, [Versioned::DRAFT, Versioned::LIVE])
+        ) {
+            return $this->jsonResponse(400, null, 'Invalid request');
+        }
+        $dataClass = BaseElement::class;
+        $record = null;
+        $from = null;
+        // todo: elemental revert will probably only ever use one of these, so remove the other one
+        if ($fromVersion) {
+            $record = Versioned::get_version($dataClass, $id, $fromVersion);
+            $from = $fromVersion;
+        } elseif ($fromStage) {
+            $record = Versioned::get_by_stage($dataClass, $fromVersion)->byID($id);
+            $from = $fromStage;
+        } else {
+            return $this->jsonResponse(400, null, 'You must provide either a fromStage or fromVersion argument');
+        }
+        if (!$record) {
+            return $this->jsonResponse(400, null, "Record $id not found");
+        }
+        $can = $toStage === Versioned::LIVE ? $record->canPublish(): $record->canEdit();
+        if (!$can) {
+            return $this->jsonResponse(403, null, "Copying element from $from to $toStage is not allowed");
+        }
+        /** @var DataObject|Versioned $record */
+        $record->copyVersionToStage($from, $toStage);
+        return $this->jsonResponse(201);
     }
 
     public function apiArchive(): HTTPResponse
