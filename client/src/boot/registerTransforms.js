@@ -39,19 +39,48 @@ export default () => {
     }
   );
 
-  Injector.transform(
-    'blocks-history-revert',
-    (updater) => {
-      // Add block element revert GraphQL mutation to the HistoryViewerToolbar
-      updater.component(
-        'HistoryViewerToolbar.VersionedAdmin.HistoryViewer.Element.HistoryViewerVersionDetail',
-        revertToBlockVersionMutation,
-        'BlockRevertMutation'
-      );
-    }
-  );
+  if (!getConfig().useGraphql) {
+
+    Injector.transform(
+      'blocks-history-revert',
+      (updater) => {
+        // Add revertToVersion() to props.actions on HistoryViewerToolbar
+        updater.component(
+          'HistoryViewerToolbar.VersionedAdmin.HistoryViewer.Element.HistoryViewerVersionDetail',
+          (HistoryViewerVersionDetailComponent) => (props) => {
+            //props.actions.revertToVersion = (id, fromVersion, fromStage, toStage) => {
+            //},
+            // props has had preventExtensions() called on it, so clone it to add new properties
+            const newProps = {...props};
+            if (!newProps.hasOwnProperty('actions')) {
+              newProps.actions = {};
+            }
+            newProps.actions.revertToVersion = () => console.log('IT WORKS');
+            return <HistoryViewerVersionDetailComponent {...newProps}/>;
+          },
+          'BlockRevertAjax'
+        );
+      }
+    );
+
+  }
 
   if (getConfig().useGraphql) {
+
+    Injector.transform(
+      'blocks-history-revert',
+      (updater) => {
+        // Add block element revert GraphQL mutation to the HistoryViewerToolbar
+        // This is the yellow revert button at the bottom on
+        // /admin/pages/edit/EditForm/6/field/ElementalArea/item/2/edit#Root_History
+        updater.component(
+          'HistoryViewerToolbar.VersionedAdmin.HistoryViewer.Element.HistoryViewerVersionDetail',
+          revertToBlockVersionMutation,
+          'BlockRevertMutation'
+        );
+      }
+    );
+
     Injector.transform(
       'cms-element-editor',
       (updater) => {

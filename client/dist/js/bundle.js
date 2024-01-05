@@ -194,6 +194,8 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
+var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
 var _Injector = __webpack_require__(3);
 
 var _Injector2 = _interopRequireDefault(_Injector);
@@ -254,11 +256,30 @@ exports.default = function () {
     updater.component('HistoryViewer.Form_ItemEditForm', _readOneBlockQuery2.default, 'ElementHistoryViewer');
   });
 
-  _Injector2.default.transform('blocks-history-revert', function (updater) {
-    updater.component('HistoryViewerToolbar.VersionedAdmin.HistoryViewer.Element.HistoryViewerVersionDetail', _revertToBlockVersionMutation2.default, 'BlockRevertMutation');
-  });
+  if (!(0, _elementConfig.getConfig)().useGraphql) {
+
+    _Injector2.default.transform('blocks-history-revert', function (updater) {
+      updater.component('HistoryViewerToolbar.VersionedAdmin.HistoryViewer.Element.HistoryViewerVersionDetail', function (HistoryViewerVersionDetailComponent) {
+        return function (props) {
+          var newProps = _extends({}, props);
+          if (!newProps.hasOwnProperty('actions')) {
+            newProps.actions = {};
+          }
+          newProps.actions.revertToVersion = function () {
+            return console.log('IT WORKS');
+          };
+          return React.createElement(HistoryViewerVersionDetailComponent, newProps);
+        };
+      }, 'BlockRevertAjax');
+    });
+  }
 
   if ((0, _elementConfig.getConfig)().useGraphql) {
+
+    _Injector2.default.transform('blocks-history-revert', function (updater) {
+      updater.component('HistoryViewerToolbar.VersionedAdmin.HistoryViewer.Element.HistoryViewerVersionDetail', _revertToBlockVersionMutation2.default, 'BlockRevertMutation');
+    });
+
     _Injector2.default.transform('cms-element-editor', function (updater) {
       updater.component('ElementList', _readBlocksForAreaQuery2.default, 'PageElements');
     });

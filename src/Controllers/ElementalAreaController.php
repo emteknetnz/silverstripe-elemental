@@ -61,7 +61,6 @@ class ElementalAreaController extends CMSMain
         'apiArchive',
         'apiPublish',
         'apiUnpublish',
-        // todo - revert mutation is used in history viewer (versioned-admin) see ReadHistoryViewerBlock.js
         'apiRevert',
     ];
 
@@ -92,6 +91,11 @@ class ElementalAreaController extends CMSMain
         $request = $this->getRequest();
         $postData = json_decode($request->getBody(), true);
         return $postData;
+    }
+
+    public function apiRevert(): HTTPResponse
+    {
+        
     }
 
     public function apiArchive(): HTTPResponse
