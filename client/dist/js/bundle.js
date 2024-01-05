@@ -194,8 +194,6 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
-
 var _Injector = __webpack_require__(3);
 
 var _Injector2 = _interopRequireDefault(_Injector);
@@ -211,6 +209,10 @@ var _HistoricElementView2 = _interopRequireDefault(_HistoricElementView);
 var _revertToBlockVersionMutation = __webpack_require__("./client/src/state/history/revertToBlockVersionMutation.js");
 
 var _revertToBlockVersionMutation2 = _interopRequireDefault(_revertToBlockVersionMutation);
+
+var _revertToBlockVersionRequest = __webpack_require__("./client/src/state/history/revertToBlockVersionRequest.js");
+
+var _revertToBlockVersionRequest2 = _interopRequireDefault(_revertToBlockVersionRequest);
 
 var _readBlocksForAreaQuery = __webpack_require__("./client/src/state/editor/readBlocksForAreaQuery.js");
 
@@ -257,25 +259,12 @@ exports.default = function () {
   });
 
   if (!(0, _elementConfig.getConfig)().useGraphql) {
-
     _Injector2.default.transform('blocks-history-revert', function (updater) {
-      updater.component('HistoryViewerToolbar.VersionedAdmin.HistoryViewer.Element.HistoryViewerVersionDetail', function (HistoryViewerVersionDetailComponent) {
-        return function (props) {
-          var newProps = _extends({}, props);
-          if (!newProps.hasOwnProperty('actions')) {
-            newProps.actions = {};
-          }
-          newProps.actions.revertToVersion = function () {
-            return console.log('IT WORKS');
-          };
-          return React.createElement(HistoryViewerVersionDetailComponent, newProps);
-        };
-      }, 'BlockRevertAjax');
+      updater.component('HistoryViewerToolbar.VersionedAdmin.HistoryViewer.Element.HistoryViewerVersionDetail', _revertToBlockVersionRequest2.default, 'BlockRevertRequest');
     });
   }
 
   if ((0, _elementConfig.getConfig)().useGraphql) {
-
     _Injector2.default.transform('blocks-history-revert', function (updater) {
       updater.component('HistoryViewerToolbar.VersionedAdmin.HistoryViewer.Element.HistoryViewerVersionDetail', _revertToBlockVersionMutation2.default, 'BlockRevertMutation');
     });
@@ -4658,6 +4647,49 @@ var config = {
 exports.mutation = mutation;
 exports.config = config;
 exports.default = (0, _reactApollo.graphql)(mutation, config);
+
+/***/ }),
+
+/***/ "./client/src/state/history/revertToBlockVersionRequest.js":
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
+var _Backend = __webpack_require__(8);
+
+var _Backend2 = _interopRequireDefault(_Backend);
+
+var _elementConfig = __webpack_require__("./client/src/state/editor/elementConfig.js");
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var revertToBlockVersionRequest = function revertToBlockVersionRequest(HistoryViewerVersionDetailComponent) {
+  return function (props) {
+    var newProps = _extends({}, props);
+    if (!newProps.hasOwnProperty('actions')) {
+      newProps.actions = {};
+    }
+    newProps.actions.revertToVersion = function (id, fromVersion, fromStage, toStage) {
+      var url = (0, _elementConfig.getConfig)().controllerLink.replace(/\/$/, '') + '/revert';
+      return _Backend2.default.post(url, {
+        ID: id,
+        fromVersion: fromVersion,
+        fromStage: fromStage,
+        toStage: toStage
+      });
+    };
+    return React.createElement(HistoryViewerVersionDetailComponent, newProps);
+  };
+};
+
+exports.default = revertToBlockVersionRequest;
 
 /***/ }),
 

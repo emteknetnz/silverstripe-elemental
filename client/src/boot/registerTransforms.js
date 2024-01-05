@@ -2,6 +2,7 @@ import Injector from 'lib/Injector';
 import readOneBlockQuery from 'state/history/readOneBlockQuery';
 import HistoricElementViewFactory from 'components/HistoricElementView/HistoricElementView';
 import revertToBlockVersionMutation from 'state/history/revertToBlockVersionMutation';
+import revertToBlockVersionRequest from 'state/history/revertToBlockVersionRequest';
 import readBlocksForAreaQuery from 'state/editor/readBlocksForAreaQuery';
 import addElementToArea from 'state/editor/addElementMutation';
 import ArchiveAction from 'components/ElementActions/ArchiveAction';
@@ -39,34 +40,23 @@ export default () => {
     }
   );
 
+  // REST
   if (!getConfig().useGraphql) {
-
     Injector.transform(
       'blocks-history-revert',
       (updater) => {
         // Add revertToVersion() to props.actions on HistoryViewerToolbar
         updater.component(
           'HistoryViewerToolbar.VersionedAdmin.HistoryViewer.Element.HistoryViewerVersionDetail',
-          (HistoryViewerVersionDetailComponent) => (props) => {
-            //props.actions.revertToVersion = (id, fromVersion, fromStage, toStage) => {
-            //},
-            // props has had preventExtensions() called on it, so clone it to add new properties
-            const newProps = {...props};
-            if (!newProps.hasOwnProperty('actions')) {
-              newProps.actions = {};
-            }
-            newProps.actions.revertToVersion = () => console.log('IT WORKS');
-            return <HistoryViewerVersionDetailComponent {...newProps}/>;
-          },
-          'BlockRevertAjax'
+          revertToBlockVersionRequest,
+          'BlockRevertRequest'
         );
       }
     );
-
   }
 
+  // GRAPHQL
   if (getConfig().useGraphql) {
-
     Injector.transform(
       'blocks-history-revert',
       (updater) => {
