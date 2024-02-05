@@ -6,25 +6,33 @@ import classNames from 'classnames';
 import { inject } from 'lib/Injector';
 import { elementTypeType } from 'types/elementTypeType';
 import i18n from 'i18n';
+import backend from 'lib/Backend';
+import { ElementEditorContext } from 'components/ElementEditor/ElementEditor';
+import { getConfig} from 'state/editor/elementConfig';
 
 /**
  * The AddElementPopover component used in the context of an ElementEditor shows the
  * available elements that can be added to an ElementalArea.
  */
 class AddElementPopover extends Component {
+
   constructor(props) {
     super(props);
 
     this.handleToggle = this.handleToggle.bind(this);
+    AddElementPopover.contextType = ElementEditorContext;
   }
 
   /**
+   * #graphql
+   * 
    * click handler that preserves the details of what was clicked
    * @param {object} elementType in the shape of types/elmementTypeType
    * @returns {function}
    */
-  getElementButtonClickHandler(elementType) {
+  getGraphQLElementButtonClickHandler(elementType) {
     return (event) => {
+      // handleAddElementToArea comes from addElementMutation.js
       const {
         actions: { handleAddElementToArea },
         insertAfterElement
@@ -37,6 +45,33 @@ class AddElementPopover extends Component {
           preview.entwine('ss.preview')._loadUrl(preview.find('iframe').attr('src'));
         }
       );
+      this.handleToggle();
+    };
+  }
+
+  /**
+   * #rpc
+   * - call add element to area endpoint (areaID, elementType, insertAfterElementID)
+   * - then call read blocks from area endpoint (areaID)
+   * - also then update the preview via jquery/entwine
+   */
+  getElementButtonClickHandler(elementType) {
+    return (event) => {
+      event.preventDefault();
+      backend.post(`/admin/elemental-area/add/`, {
+        elementClass: elementType.class,
+        elementalAreaID: this.props.areaId,
+        insertAfterElementID: this.props.insertAfterElement,
+      })
+        .then(() => {
+          // todo call read blocks from area endpoint (areaID)
+          const { fetchBlocks } = this.context;
+          fetchBlocks();
+        })
+        .then(() => {
+            const preview = window.jQuery('.cms-preview');
+            preview.entwine('ss.preview')._loadUrl(preview.find('iframe').attr('src'));
+        });
       this.handleToggle();
     };
   }
@@ -69,7 +104,9 @@ class AddElementPopover extends Component {
       content: elementType.title,
       key: elementType.name,
       className: classNames(elementType.icon, 'btn--icon-xl', 'element-editor-add-element__button'),
-      onClick: this.getElementButtonClickHandler(elementType),
+      onClick: getConfig().useGraphql
+        ? this.getGraphQLElementButtonClickHandler(elementType)
+        : this.getElementButtonClickHandler(elementType),
     }));
 
     return (

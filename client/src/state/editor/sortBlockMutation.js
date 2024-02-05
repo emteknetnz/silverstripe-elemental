@@ -35,6 +35,9 @@ const config = {
         const variables = readBlocksConfig.options({ areaId }).variables;
         const cachedData = store.readQuery({ query: readBlocksQuery, variables });
 
+        // store is apollo
+        // console.log(store);
+
         // Query returns a deeply nested object. Explicit reconstruction via spreads is too verbose.
         // This is an alternative, relatively efficient way to deep clone
         const newData = JSON.parse(JSON.stringify(cachedData));

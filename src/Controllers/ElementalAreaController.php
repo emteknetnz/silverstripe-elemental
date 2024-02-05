@@ -15,6 +15,12 @@ use SilverStripe\Core\Convert;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Forms\Form;
 use SilverStripe\Security\SecurityToken;
+use InvalidArgumentException;
+use DNADesign\Elemental\Models\ElementalArea;
+use DNADesign\Elemental\Services\ReorderElements;
+use SilverStripe\Control\Controller;
+use SilverStripe\Control\Director;
+use SilverStripe\Versioned\Versioned;
 
 /**
  * Controller for "ElementalArea" - handles loading and saving of in-line edit forms in an elemental area in admin
@@ -31,6 +37,16 @@ class ElementalAreaController extends CMSMain
         // API access points with structured data
         'POST api/saveForm/$ID' => 'apiSaveForm',
         '$FormName/field/$FieldName' => 'formAction',
+        // new api
+        'GET readBlocks/$elementalAreaID!' => 'apiReadBlocks',
+        'POST add' => 'apiAdd',
+        'POST sort' => 'apiSort',
+        'POST duplicate' => 'apiDuplicate',
+        'POST archive' => 'apiArchive',
+        'POST publish' => 'apiPublish',
+        'POST unpublish' => 'apiUnpublish',
+        // todo
+        'POST revert' => 'apiRevert',
     ];
 
     private static $allowed_actions = [
@@ -38,7 +54,300 @@ class ElementalAreaController extends CMSMain
         'schema',
         'apiSaveForm',
         'formAction',
+        // new api
+        'apiReadBlocks',
+        'apiAdd',
+        'apiSort',
+        'apiDuplicate',
+        'apiArchive',
+        'apiPublish',
+        'apiUnpublish',
+        'apiRevert',
     ];
+
+    /**
+     * This should get moved to silverstripe/admin once other modules have dual-api support
+     */
+    private static $use_graphql = false;
+
+    private function jsonResponse(int $statusCode = 200, ?array $data = null, string $message = ''): HTTPResponse
+    {
+        $response = $this->getResponse();
+        $response->setStatusCode($statusCode);
+        $response->addHeader('Content-Type', 'application/json');
+        $body = '';
+        if ($data) {
+            $body = json_encode($data);
+        } elseif ($message) {
+            $body = json_encode(['message' => $message]);
+        }
+        $response->setBody($body);
+        return $response;
+    }
+
+    // ===
+
+    private function getPostData()
+    {
+        $request = $this->getRequest();
+        $postData = json_decode($request->getBody(), true);
+        return $postData;
+    }
+
+    // VersionedResolver resolveCopyToStage()
+    public function apiRevert(): HTTPResponse
+    {
+        $postData = $this->getPostData();
+        $id = $postData['ID'] ?? '';
+        $fromVersion = (int) $postData['fromVersion'] ?? 0;
+        $fromStage = ucfirst(strtolower($postData['fromStage'])) ?? '';
+        if ($fromStage === 'Draft') {
+            $fromStage = 'Stage';
+        }
+        $toStage = ucfirst(strtolower($postData['toStage'])) ?? '';
+        if ($toStage === 'Draft') {
+            $toStage = 'Stage';
+        }
+        if (!in_array($fromStage, ['', Versioned::DRAFT, Versioned::LIVE])
+            || !in_array($toStage, [Versioned::DRAFT, Versioned::LIVE])
+        ) {
+            return $this->jsonResponse(400, null, 'Invalid request');
+        }
+        $dataClass = BaseElement::class;
+        $record = null;
+        $from = null;
+        // todo: elemental revert will probably only ever use one of these, so remove the other one
+        if ($fromVersion) {
+            $record = Versioned::get_version($dataClass, $id, $fromVersion);
+            $from = $fromVersion;
+        } elseif ($fromStage) {
+            $record = Versioned::get_by_stage($dataClass, $fromVersion)->byID($id);
+            $from = $fromStage;
+        } else {
+            return $this->jsonResponse(400, null, 'You must provide either a fromStage or fromVersion argument');
+        }
+        if (!$record) {
+            return $this->jsonResponse(400, null, "Record $id not found");
+        }
+        $can = $toStage === Versioned::LIVE ? $record->canPublish(): $record->canEdit();
+        if (!$can) {
+            return $this->jsonResponse(403, null, "Copying element from $from to $toStage is not allowed");
+        }
+        /** @var DataObject|Versioned $record */
+        $record->copyVersionToStage($from, $toStage);
+        return $this->jsonResponse(201);
+    }
+
+    public function apiArchive(): HTTPResponse
+    {
+        $id = $this->getPostData()['ID'] ?? '';
+        $element = BaseElement::get()->byID($id);
+        if (!$element) {
+            return $this->jsonResponse(400, null, "Element with ID $id does not exist");
+        }
+        if (!$element->canDelete()) {
+            return $this->jsonResponse(403, null, "Unable to delete element with ID $id");
+        }
+        $element->doArchive();
+        return $this->jsonResponse(204);
+    }
+
+    public function apiPublish(): HTTPResponse
+    {
+        $id = $this->getPostData()['ID'] ?? '';
+        $element = BaseElement::get()->byID($id);
+        if (!$element) {
+            return $this->jsonResponse(400, null, "Element with ID $id does not exist");
+        }
+        if (!$element->canPublish()) {
+            return $this->jsonResponse(403, null, "Unable to publish element with ID $id");
+        }
+        $element->publishRecursive();
+        return $this->jsonResponse(204);
+    }
+
+    public function apiUnpublish(): HTTPResponse
+    {
+        $id = $this->getPostData()['ID'] ?? '';
+        $element = BaseElement::get()->byID($id);
+        if (!$element) {
+            return $this->jsonResponse(400, null, "Element with ID $id does not exist");
+        }
+        if (!$element->canUnpublish()) {
+            return $this->jsonResponse(403, null, "Unable to publish element with ID $id");
+        }
+        $element->doUnpublish();
+        return $this->jsonResponse(204);
+    }
+
+    // Resolver.php resolveDuplicateBlock()
+    public function apiDuplicate(): HTTPResponse
+    {
+        $id = $this->getPostData()['ID'] ?? '';
+         $element = BaseElement::get()->byID($id);
+        if (!$element) {
+            return $this->jsonResponse(400, null, "Element with ID $id does not exist");
+        }
+        // check can edit the elemental area
+        $areaID = $element->ParentID;
+        $area = ElementalArea::get()->byID($areaID);
+        if (!$area) {
+            return $this->jsonResponse(400, null, "Invalid ParentID on BaseElement $id");
+        }
+        if (!$area->canEdit()) {
+            return $this->jsonResponse(403, null, "Unable to edit element with ID $id");
+        }
+        try {
+            // clone element
+            $clone = $element->duplicate(false);
+            $clone->Title = $this->getNewTitle($clone->Title ?? '');
+            $clone->Sort = 0; // must be zeroed for reorder to work
+            $area->Elements()->add($clone);
+            // reorder
+            $reorderer = Injector::inst()->create(ReorderElements::class, $clone);
+            $reorderer->reorder($id);
+            return $this->jsonResponse(204);
+        } catch (Exception $e) {
+            return $this->jsonResponse(500, null, "Something went wrong when duplicating element with ID $id");
+        }
+    }
+
+    // Resolver.php newTitle()
+    private function getNewTitle(string $title = ''): ?string
+    {
+        $hasCopyPattern = '/^.*(\scopy($|\s[0-9]+$))/';
+        $hasNumPattern = '/^.*(\s[0-9]+$)/';
+        $parts = [];
+        // does $title end with 'copy' (ignoring numbers for now)?
+        if (preg_match($hasCopyPattern ?? '', $title ?? '', $parts)) {
+            $copy = $parts[1];
+            // does $title end with numbers?
+            if (preg_match($hasNumPattern ?? '', $copy ?? '', $parts)) {
+                $num = trim($parts[1] ?? '');
+                $len = strlen($num ?? '');
+                $inc = (int)$num + 1;
+                return substr($title ?? '', 0, -$len) . "$inc";
+            } else {
+                return $title . ' 2';
+            }
+        } else {
+            return $title . ' copy';
+        }
+    }
+
+    // Resolver.php resolveSortBlock()
+    public function apiSort(): HTTPResponse
+    {
+        $postData = $this->getPostData();
+        $id = $postData['ID'] ?? 0;
+        $afterBlockID = $postData['afterBlockID'] ?? 0;
+        $element = BaseElement::get()->byID($id);
+        if (!$element) {
+            // todo 404
+            throw new InvalidArgumentException(sprintf('%s#%s not found', BaseElement::class, $id));
+        }
+        if (!$element->canEdit()) {
+            $message = 'Changing the sort order of blocks is not allowed for the current user';
+            throw new InvalidArgumentException($message);
+        }
+        $reorderingService = Injector::inst()->create(ReorderElements::class, $element);
+        $reorderingService->reorder($afterBlockID);
+        return $this->jsonResponse(204);
+    }
+
+    public function apiReadBlocks(): HTTPResponse
+    {
+        $request = $this->getRequest();
+        $elementalAreaID = $request->param('elementalAreaID');
+        $elementalArea = ElementalArea::get()->byID($elementalAreaID);
+        if (!$elementalArea) {
+            throw new InvalidArgumentException("Invalid ElementalAreaID: $elementalAreaID");
+        }
+        if (!$elementalArea->canView()) {
+            throw new InvalidArgumentException("The current user has insufficient permission to view ElementalArea");
+        }
+        $data = [];
+        foreach ($elementalArea->Elements() as $element) {
+            if (!$element->canView()) {
+                continue;
+            }
+            $typeName = str_replace('\\', '_', get_class($element)); // todo obsolete class name
+            // should probably be able to just red rid of this
+            $blockSchema = [
+                'typeName' => $typeName,
+                'actions' => [
+                    'edit' => Controller::join_links(
+                        Director::absoluteBaseURL(),
+                        "/admin/pages/edit/show/4" // todo pageID
+                    )
+                ],
+                'content' => '',
+            ];
+            $data[] = [
+                'id' => (string) $element->ID,
+                'title' => $element->Title,
+                '__typename' => 'Block', // todo (delete)
+                'blockSchema' => $blockSchema,
+                'obsoleteClassName' => $element->getObsoleteClassName(),
+                'version' => $element->Version,
+                'isPublished' => $element->isPublished(),
+                'isLiveVersion' => $element->isLiveVersion(),
+                // 'canEdit' => $element->canEdit(), // not in graphql response
+                'canDelete' => $element->canDelete(),
+                'canPublish' => $element->canPublish(),
+                'canUnpublish' => $element->canUnpublish(),
+                'canCreate' => $element->canCreate(), // todo shouldn't be in response?
+            ];
+        }
+        return $this->jsonResponse(200, $data);
+    }
+
+    // Resolver.php resolveAddElementToArea()
+    public function apiAdd(): HTTPResponse
+    {
+        $request = $this->getRequest();
+        $postData = json_decode($request->getBody(), true);
+        $elementClass = $postData['elementClass'];
+        $elementalAreaID = $postData['elementalAreaID'];
+        $afterElementID = $postData['insertAfterElementID'] ?? null;
+        // validate post vars
+        if (!is_subclass_of($elementClass, BaseElement::class)) {
+            throw new InvalidArgumentException("$elementClass is not a subclass of " . BaseElement::class);
+        }
+        $elementalArea = ElementalArea::get()->byID($elementalAreaID);
+        if (!$elementalArea) {
+            throw new InvalidArgumentException("Invalid ElementalAreaID: $elementalAreaID");
+        }
+        // permission checks
+        if (!$elementalArea->canEdit()) {
+            throw new InvalidArgumentException("The current user has insufficient permission to edit ElementalAreas");
+        }
+        /** @var BaseElement $newElement */
+        $newElement = Injector::inst()->create($elementClass);
+        if (!$newElement->canEdit()) {
+            throw new InvalidArgumentException(
+                'The current user has insufficient permission to edit Elements'
+            );
+        }
+        // Assign the parent ID directly rather than via HasManyList to prevent multiple writes.
+        // See BaseElement::$has_one for the "Parent" naming.
+        $newElement->ParentID = $elementalArea->ID;
+        // Ensure that a sort order is assigned - see BaseElement::onBeforeWrite()
+        $newElement->onBeforeWrite();
+        if ($afterElementID !== null) {
+            /** @var ReorderElements $reorderer */
+            $reorderer = Injector::inst()->create(ReorderElements::class, $newElement);
+            $reorderer->reorder($afterElementID); // also writes the element
+        } else {
+            $newElement->write();
+        }
+        $response = $this->getResponse();
+        $response->setStatusCode(201);
+        return $response;
+        // return $newElement;
+    }
+
+    // ===
 
     public function getClientConfig()
     {
@@ -50,6 +359,10 @@ class ElementalAreaController extends CMSMain
             'payloadFormat' => 'json',
             'formNameTemplate' => sprintf(static::FORM_NAME_TEMPLATE ?? '', '{id}'),
         ];
+        $clientConfig['controllerLink'] = $this->Link();
+
+        // this should get moved to silverstripe/admin once other modules have dual-api support
+        $clientConfig['useGraphql'] = self::config()->get('use_graphql');
 
         // Configuration that is available per element type
         $clientConfig['elementTypes'] = ElementTypeRegistry::generate()->getDefinitions();

@@ -2,6 +2,7 @@
 
 namespace DNADesign\Elemental\Models;
 
+use DNADesign\Elemental\Controllers\ElementController;
 use DNADesign\Elemental\Extensions\ElementalAreasExtension;
 use DNADesign\Elemental\TopPage\DataExtension;
 use SilverStripe\Core\ClassInfo;
@@ -23,7 +24,6 @@ use SilverStripe\View\ViewableData;
  * @property string $OwnerClassName
  *
  * @mixin Versioned
- * @method HasManyList<BaseElement> Elements()
  */
 class ElementalArea extends DataObject
 {
@@ -124,7 +124,7 @@ class ElementalArea extends DataObject
 
     /**
      * A cache-aware accessor for the elements
-     * @return ArrayList|HasManyList|BaseElement[]
+     * @return HasManyList<BaseElement>
      */
     public function Elements()
     {
@@ -160,7 +160,7 @@ class ElementalArea extends DataObject
      * its' controller, making it easier to access and process form logic and
      * actions stored in {@link ElementController}.
      *
-     * @return ArrayList
+     * @return ArrayList<ElementController>
      * @throws \Exception
      */
     public function ElementControllers()
