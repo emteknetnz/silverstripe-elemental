@@ -8,4 +8,4 @@ on:
 jobs:
   ci:
     name: CI
-    uses: emteknetnz/gha-ci/.github/workflows/ci.yml@main
+    uses: emteknetnz/gha-ci/.github/workflows/ci.yml@pulls/1/prefer-lowest
